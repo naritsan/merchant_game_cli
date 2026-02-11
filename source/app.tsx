@@ -3,6 +3,8 @@ import { useGameState } from './hooks/useGameState.js';
 import MainMenuScreen from './components/MainMenuScreen.js';
 import BattleScreen from './components/BattleScreen.js';
 import ShopScreen from './components/ShopScreen.js';
+// Import the missing component
+import SellShopScreen from './components/SellShopScreen.js';
 
 export default function App() {
 	const { state, setState, moveCommand, selectCommand, changeScene } =
@@ -36,6 +38,20 @@ export default function App() {
 			);
 		}
 
-		// No default
+		// Add the missing case for 'sell_shop'
+		case 'sell_shop': {
+			return (
+				<SellShopScreen
+					state={state}
+					setState={setState}
+					changeScene={changeScene}
+				/>
+			);
+		}
+
+		// It is also good practice to return null for any unexpected case to satisfy TypeScript
+		default: {
+			return null;
+		}
 	}
 }
