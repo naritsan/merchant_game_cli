@@ -1,0 +1,185 @@
+import { useCallback } from 'react';
+import {
+    type GameState,
+    type ShopState,
+    type Item,
+    SHOP_COMMANDS,
+    SHOP_ITEMS,
+} from '../types/index.js';
+
+type UseShopStateArgs = {
+    state: GameState;
+    setState: React.Dispatch<React.SetStateAction<GameState>>;
+    changeScene: (scene: GameState['scene']) => void;
+};
+
+export function useShopState({ state, setState, changeScene }: UseShopStateArgs) {
+    const { shop } = state;
+
+    const updateShop = useCallback(
+        (updater: (prev: ShopState) => Partial<ShopState>) => {
+            setState(prev => ({
+                ...prev,
+                shop: { ...prev.shop, ...updater(prev.shop) },
+            }));
+        },
+        [setState],
+    );
+
+    const moveMenuItem = useCallback(
+        (direction: 'up' | 'down') => {
+            if (shop.mode === 'menu') {
+                updateShop(prev => {
+                    const next =
+                        direction === 'up'
+                            ? (prev.selectedMenuItem - 1 + SHOP_COMMANDS.length) %
+                            SHOP_COMMANDS.length
+                            : (prev.selectedMenuItem + 1) % SHOP_COMMANDS.length;
+                    return { selectedMenuItem: next };
+                });
+            } else if (shop.mode === 'buy') {
+                updateShop(prev => {
+                    const next =
+                        direction === 'up'
+                            ? (prev.selectedItemIndex - 1 + SHOP_ITEMS.length) %
+                            SHOP_ITEMS.length
+                            : (prev.selectedItemIndex + 1) % SHOP_ITEMS.length;
+                    return { selectedItemIndex: next };
+                });
+            } else if (shop.mode === 'sell') {
+                updateShop(prev => {
+                    const len = Math.max(1, state.shop.inventory.length);
+                    const next =
+                        direction === 'up'
+                            ? (prev.selectedItemIndex - 1 + len) % len
+                            : (prev.selectedItemIndex + 1) % len;
+                    return { selectedItemIndex: next };
+                });
+            }
+        },
+        [shop.mode, state.shop.inventory.length, updateShop],
+    );
+
+    const buyItem = useCallback(
+        (item: Item) => {
+            setState(prev => {
+                if (prev.shop.gold < item.price) {
+                    return {
+                        ...prev,
+                        shop: {
+                            ...prev.shop,
+                            shopMessage: 'おかねが たりないようですね…',
+                        },
+                    };
+                }
+
+                return {
+                    ...prev,
+                    shop: {
+                        ...prev.shop,
+                        gold: prev.shop.gold - item.price,
+                        inventory: [...prev.shop.inventory, item],
+                        shopMessage: `${item.name} を かいました！`,
+                    },
+                };
+            });
+        },
+        [setState],
+    );
+
+    const sellItem = useCallback(
+        (index: number) => {
+            setState(prev => {
+                const item = prev.shop.inventory[index];
+                if (!item) {
+                    return {
+                        ...prev,
+                        shop: {
+                            ...prev.shop,
+                            shopMessage: 'うるものが ありません。',
+                        },
+                    };
+                }
+
+                const sellPrice = Math.floor(item.price / 2);
+                const newInventory = [...prev.shop.inventory];
+                newInventory.splice(index, 1);
+
+                return {
+                    ...prev,
+                    shop: {
+                        ...prev.shop,
+                        gold: prev.shop.gold + sellPrice,
+                        inventory: newInventory,
+                        shopMessage: `${item.name} を ${sellPrice} G で うりました！`,
+                        selectedItemIndex: Math.min(
+                            prev.shop.selectedItemIndex,
+                            Math.max(0, newInventory.length - 1),
+                        ),
+                    },
+                };
+            });
+        },
+        [setState],
+    );
+
+    const selectMenuItem = useCallback(() => {
+        const command = SHOP_COMMANDS[shop.selectedMenuItem]!;
+        switch (command) {
+            case 'かう': {
+                updateShop(() => ({
+                    mode: 'buy',
+                    selectedItemIndex: 0,
+                    shopMessage: 'なにを かいますか？',
+                }));
+                break;
+            }
+
+            case 'うる': {
+                updateShop(() => ({
+                    mode: 'sell',
+                    selectedItemIndex: 0,
+                    shopMessage: 'なにを うりますか？',
+                }));
+                break;
+            }
+
+            case 'そうび': {
+                updateShop(() => ({
+                    shopMessage: 'そうび きのうは まだ できません…',
+                }));
+                break;
+            }
+
+            case 'やめる': {
+                updateShop(() => ({
+                    shopMessage: 'またのおこしを おまちしています！',
+                }));
+                changeScene('menu');
+                break;
+            }
+
+            // No default
+        }
+    }, [shop.selectedMenuItem, updateShop, changeScene]);
+
+    const selectItem = useCallback(() => {
+        if (shop.mode === 'buy') {
+            const item = SHOP_ITEMS[shop.selectedItemIndex];
+            if (item) {
+                buyItem(item);
+            }
+        } else if (shop.mode === 'sell') {
+            sellItem(shop.selectedItemIndex);
+        }
+    }, [shop.mode, shop.selectedItemIndex, buyItem, sellItem]);
+
+    const goBackToMenu = useCallback(() => {
+        updateShop(() => ({
+            mode: 'menu',
+            shopMessage: 'ほかに なにか ありますか？',
+        }));
+    }, [updateShop]);
+
+    return { moveMenuItem, selectMenuItem, selectItem, goBackToMenu };
+}

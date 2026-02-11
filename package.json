@@ -1,0 +1,28 @@
+{
+	"name": "merchant_game_cli",
+	"version": "0.0.0",
+	"license": "MIT",
+	"bin": "dist/cli.js",
+	"type": "module",
+	"engines": {
+		"node": ">=16"
+	},
+	"scripts": {
+		"build": "tsc",
+		"dev": "tsc --watch",
+		"start": "node dist/cli.js"
+	},
+	"files": [
+		"dist"
+	],
+	"dependencies": {
+		"ink": "^4.1.0",
+		"react": "^18.2.0"
+	},
+	"devDependencies": {
+		"@sindresorhus/tsconfig": "^3.0.1",
+		"@types/node": "^25.2.3",
+		"@types/react": "^18.0.32",
+		"typescript": "^5.0.3"
+	}
+}
