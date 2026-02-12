@@ -124,9 +124,16 @@ export default function ShopSetupScreen({ state, setState, changeScene }: Props)
             </BorderBox>
 
             <Box paddingX={1}>
+                {state.sellShop.displayItems.length > 0 && mode === 'select' ? (
+                    <Box marginBottom={1}>
+                        <Text color="green" bold>
+                            準備OK！ [O] キーで みせをひらく
+                        </Text>
+                    </Box>
+                ) : null}
                 <Text dimColor>
                     {mode === 'select'
-                        ? '↑↓: 選択 Enter: 価格設定 O: 開店 Esc: もどる'
+                        ? '↑↓: 選択 Enter: 価格設定 Esc: もどる'
                         : '↑↓: 価格変更(10G) Enter: 陳列 Esc: キャンセル'}
                 </Text>
             </Box>

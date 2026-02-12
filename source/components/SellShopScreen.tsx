@@ -72,7 +72,10 @@ export default function SellShopScreen({ state, setState, changeScene }: Props) 
                         <Text>「{customer.dialogue}」</Text>
                         <Text> </Text>
                         <Text dimColor>
-                            希望: {customer.wantItem.name}　（定価 {customer.wantItem.price} G）
+                            希望: {customer.wantItem.name}
+                        </Text>
+                        <Text color="yellow">
+                            提示: {customer.targetPrice} G <Text dimColor>(定価 {customer.wantItem.price} G)</Text>
                         </Text>
                     </Box>
                 ) : (

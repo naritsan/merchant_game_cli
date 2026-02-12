@@ -51,6 +51,8 @@ export type Customer = {
 	name: string;
 	wantItem: Item;
 	maxBudget: number; // 出せる最高額
+	targetStockId: number; // 狙っている在庫商品のID
+	targetPrice: number; // その時の値札価格
 	maxNegotiations: number; // 交渉可能回数（1～3）
 	currentNegotiation: number; // 現在の交渉回数
 	offeredPrice?: number; // 客が提示した価格
@@ -58,13 +60,13 @@ export type Customer = {
 };
 
 export const CUSTOMERS: Customer[] = [
-	{ name: 'まちのむすめ', wantItem: {} as Item, maxBudget: 0, maxNegotiations: 1, currentNegotiation: 0, dialogue: '' },
-	{ name: 'たびのせんし', wantItem: {} as Item, maxBudget: 0, maxNegotiations: 2, currentNegotiation: 0, dialogue: '' },
-	{ name: 'おかねもち', wantItem: {} as Item, maxBudget: 0, maxNegotiations: 3, currentNegotiation: 0, dialogue: '' },
-	{ name: 'まほうつかい', wantItem: {} as Item, maxBudget: 0, maxNegotiations: 2, currentNegotiation: 0, dialogue: '' },
-	{ name: 'ぼうけんしゃ', wantItem: {} as Item, maxBudget: 0, maxNegotiations: 1, currentNegotiation: 0, dialogue: '' },
-	{ name: 'おじいさん', wantItem: {} as Item, maxBudget: 0, maxNegotiations: 3, currentNegotiation: 0, dialogue: '' },
-	{ name: 'こどもの王子', wantItem: {} as Item, maxBudget: 0, maxNegotiations: 2, currentNegotiation: 0, dialogue: '' },
+	{ name: 'まちのむすめ', wantItem: {} as Item, maxBudget: 0, targetStockId: -1, targetPrice: 0, maxNegotiations: 1, currentNegotiation: 0, dialogue: '' },
+	{ name: 'たびのせんし', wantItem: {} as Item, maxBudget: 0, targetStockId: -1, targetPrice: 0, maxNegotiations: 2, currentNegotiation: 0, dialogue: '' },
+	{ name: 'おかねもち', wantItem: {} as Item, maxBudget: 0, targetStockId: -1, targetPrice: 0, maxNegotiations: 3, currentNegotiation: 0, dialogue: '' },
+	{ name: 'まほうつかい', wantItem: {} as Item, maxBudget: 0, targetStockId: -1, targetPrice: 0, maxNegotiations: 2, currentNegotiation: 0, dialogue: '' },
+	{ name: 'ぼうけんしゃ', wantItem: {} as Item, maxBudget: 0, targetStockId: -1, targetPrice: 0, maxNegotiations: 1, currentNegotiation: 0, dialogue: '' },
+	{ name: 'おじいさん', wantItem: {} as Item, maxBudget: 0, targetStockId: -1, targetPrice: 0, maxNegotiations: 3, currentNegotiation: 0, dialogue: '' },
+	{ name: 'こどもの王子', wantItem: {} as Item, maxBudget: 0, targetStockId: -1, targetPrice: 0, maxNegotiations: 2, currentNegotiation: 0, dialogue: '' },
 ];
 
 // === 戦闘 ===

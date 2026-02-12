@@ -3,8 +3,8 @@ import {
     type GameState,
     type Customer,
     type SellShopState,
+    type DisplayItem,
     CUSTOMERS,
-    SHOP_ITEMS,
     SELL_SHOP_COMMANDS,
 } from '../types/index.js';
 
@@ -14,9 +14,13 @@ type UseSellShopStateArgs = {
     changeScene: (scene: GameState['scene']) => void;
 };
 
-function generateCustomer(): Customer {
+function generateCustomer(displayItems: DisplayItem[]): Customer | null {
+    if (displayItems.length === 0) return null;
+
     const template = CUSTOMERS[Math.floor(Math.random() * CUSTOMERS.length)]!;
-    const wantItem = SHOP_ITEMS[Math.floor(Math.random() * SHOP_ITEMS.length)]!;
+    const targetDisplayItem = displayItems[Math.floor(Math.random() * displayItems.length)]!;
+    const wantItem = targetDisplayItem.inventoryItem.item;
+
     // 客の予算はアイテム定価の80%〜150%でランダム
     const budgetRate = 0.8 + Math.random() * 0.7;
     const maxBudget = Math.floor(wantItem.price * budgetRate);
@@ -32,6 +36,8 @@ function generateCustomer(): Customer {
     return {
         ...template,
         wantItem,
+        targetStockId: targetDisplayItem.stockId,
+        targetPrice: targetDisplayItem.price,
         maxBudget,
         currentNegotiation: 0,
         dialogue,
@@ -53,14 +59,25 @@ export function useSellShopState({ state, setState, changeScene }: UseSellShopSt
 
     // 客を呼ぶ
     const summonCustomer = useCallback(() => {
-        const customer = generateCustomer();
+        const customer = generateCustomer(state.sellShop.displayItems);
+
+        if (!customer) {
+            updateSellShop(() => ({
+                customer: null,
+                sellMessage: '陳列されている 商品が ありません！\n（「みせをとじる」で 準備してください）',
+                selectedCommand: 0,
+                isWaiting: true,
+            }));
+            return;
+        }
+
         updateSellShop(() => ({
             customer,
             sellMessage: `${customer.name} が やってきた！\n「${customer.dialogue}」`,
             selectedCommand: 0,
             isWaiting: false,
         }));
-    }, [updateSellShop]);
+    }, [state.sellShop.displayItems, updateSellShop]);
 
     // コマンド移動
     const moveCommand = useCallback(
@@ -77,83 +94,94 @@ export function useSellShopState({ state, setState, changeScene }: UseSellShopSt
         [updateSellShop],
     );
 
+    // 商品売却と在庫・陳列の整合性更新
+    const executeSale = useCallback((price: number, targetStockId: number, itemName: string) => {
+        setState(prev => {
+            // 在庫削除
+            const newInventory = [...prev.inventory];
+            newInventory.splice(targetStockId, 1);
+
+            // 陳列更新: 売れた商品を削除し、それ以降のstockIdを詰める
+            const newDisplayItems = prev.sellShop.displayItems
+                .filter(d => d.stockId !== targetStockId) // 売れた商品を削除
+                .map(d => ({
+                    ...d,
+                    stockId: d.stockId > targetStockId ? d.stockId - 1 : d.stockId // インデックスずれ補正
+                }));
+
+            return {
+                ...prev,
+                gold: prev.gold + price,
+                inventory: newInventory,
+                sellShop: {
+                    ...prev.sellShop,
+                    displayItems: newDisplayItems,
+                    sellMessage: `${itemName} を ${price} G で うりました！`,
+                    salesCount: prev.sellShop.salesCount + 1,
+                    customer: null,
+                    isWaiting: true,
+                },
+            };
+        });
+    }, [setState]);
+
     // 売る
     const sellToCustomer = useCallback(() => {
-        setState(prev => {
-            const { customer } = prev.sellShop;
-            if (!customer) return prev;
+        const { customer } = state.sellShop;
+        if (!customer) return;
 
-            // 在庫チェック
-            const itemIndex = prev.inventory.findIndex(
-                (invItem) => invItem.item.name === customer.wantItem.name,
-            );
-            if (itemIndex === -1) {
-                return {
-                    ...prev,
-                    sellShop: {
-                        ...prev.sellShop,
-                        sellMessage: `${customer.wantItem.name} は ざいこが ありません！`,
-                    },
-                };
-            }
+        // 値札が高すぎて予算オーバーの場合
+        if (customer.targetPrice > customer.maxBudget) {
+            updateSellShop(() => ({
+                sellMessage: `${customer.name}「${customer.targetPrice}G か…\n  ${customer.maxBudget}G なら 出せるのだが…」\n（カウンターで 値下げできます）`
+            }));
+            return;
+        }
 
-            const sellPrice = customer.wantItem.price;
-            const newInventory = [...prev.inventory];
-            newInventory.splice(itemIndex, 1);
+        executeSale(customer.targetPrice, customer.targetStockId, customer.wantItem.name);
+    }, [state.sellShop, updateSellShop, executeSale]);
 
-            return {
-                ...prev,
-                gold: prev.gold + sellPrice,
-                inventory: newInventory,
-                sellShop: {
-                    ...prev.sellShop,
-                    sellMessage: `${customer.wantItem.name} を ${sellPrice} G で うりました！`,
-                    salesCount: prev.sellShop.salesCount + 1,
-                    customer: null,
-                    isWaiting: true,
-                },
-            };
-        });
-    }, [setState]);
-
-    // 値引き
+    // 値引き（カウンター）
     const discount = useCallback(() => {
-        setState(prev => {
-            const { customer } = prev.sellShop;
-            if (!customer) return prev;
+        const { customer } = state.sellShop;
+        if (!customer) return;
 
-            const itemIndex = prev.inventory.findIndex(
-                (invItem) => invItem.item.name === customer.wantItem.name,
-            );
-            if (itemIndex === -1) {
-                return {
-                    ...prev,
-                    sellShop: {
-                        ...prev.sellShop,
-                        sellMessage: `${customer.wantItem.name} は ざいこが ありません！`,
-                    },
+        const currentPrice = customer.targetPrice;
+        const newPrice = Math.floor(currentPrice * 0.9); // 10%引き
+        const nextNegotiation = customer.currentNegotiation + 1;
+
+        // 予算内に入った場合 -> 売れる
+        if (newPrice <= customer.maxBudget) {
+            executeSale(newPrice, customer.targetStockId, customer.wantItem.name);
+            updateSellShop(() => ({
+                sellMessage: `${customer.name}「ありがとう！ それなら 買います！」\n（${newPrice} G で うれました）`
+            }));
+            return;
+        }
+
+        // まだ高いが、交渉回数が残っている場合
+        if (nextNegotiation < customer.maxNegotiations) {
+            updateSellShop(_ => {
+                const updatedCustomer = {
+                    ...customer,
+                    targetPrice: newPrice,
+                    currentNegotiation: nextNegotiation
                 };
-            }
+                return {
+                    customer: updatedCustomer,
+                    sellMessage: `${customer.name}「${newPrice} G か… まだ すこし 高いな…」\n（あと {${customer.maxNegotiations - nextNegotiation}} 回 交渉できそうです）`
+                };
+            });
+            return;
+        }
 
-            // 値引き: 客の予算で売る
-            const sellPrice = customer.maxBudget;
-            const newInventory = [...prev.inventory];
-            newInventory.splice(itemIndex, 1);
-
-            return {
-                ...prev,
-                gold: prev.gold + sellPrice,
-                inventory: newInventory,
-                sellShop: {
-                    ...prev.sellShop,
-                    sellMessage: `ねびきして ${customer.wantItem.name} を ${sellPrice} G で うりました！`,
-                    salesCount: prev.sellShop.salesCount + 1,
-                    customer: null,
-                    isWaiting: true,
-                },
-            };
-        });
-    }, [setState]);
+        // 交渉決裂
+        updateSellShop(() => ({
+            customer: null,
+            sellMessage: `${customer.name}「${newPrice} G か… えんが なかったようだな」\n（客は かえっていった…）`,
+            isWaiting: true
+        }));
+    }, [state.sellShop, updateSellShop, executeSale]);
 
     // 断る
     const refuse = useCallback(() => {

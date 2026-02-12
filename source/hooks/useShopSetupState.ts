@@ -66,7 +66,7 @@ export function useShopSetupState({ setState, changeScene }: UseShopSetupStateAr
                 sellMessage: 'みせを ひらいた！',
             },
         }));
-        changeScene('menu'); // 一旦メニューに戻る（後でSellShopScreenに直接遷移する）
+        changeScene('sell_shop'); // 開店準備完了して販売画面へ
     }, [setState, changeScene]);
 
     return {
