@@ -3,6 +3,7 @@ import { useGameState } from './hooks/useGameState.js';
 import MainMenuScreen from './components/MainMenuScreen.js';
 import BattleScreen from './components/BattleScreen.js';
 import ShopScreen from './components/ShopScreen.js';
+import ShopSetupScreen from './components/ShopSetupScreen.js';
 import SellShopScreen from './components/SellShopScreen.js';
 
 export default function App() {
@@ -38,6 +39,16 @@ export default function App() {
 		case 'sell_shop': {
 			return (
 				<SellShopScreen
+					state={state}
+					setState={setState}
+					changeScene={changeScene}
+				/>
+			);
+		}
+
+		case 'shop_setup': {
+			return (
+				<ShopSetupScreen
 					state={state}
 					setState={setState}
 					changeScene={changeScene}

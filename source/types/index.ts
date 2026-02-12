@@ -4,11 +4,25 @@ export type ItemType = 'weapon' | 'armor' | 'item';
 
 export type Item = {
 	name: string;
-	emoji: string;
 	price: number;
 	type: ItemType;
 	attack?: number;
 	defense?: number;
+};
+
+// === 在庫アイテム ===
+
+export type InventoryItem = {
+	item: Item;
+	purchasePrice: number; // 実際に仕入れた価格
+};
+
+// === 陳列商品 ===
+
+export type DisplayItem = {
+	inventoryItem: InventoryItem;
+	price: number; // 値札（商人が設定）
+	stockId: number; // 在庫配列のインデックス
 };
 
 // === キャラクター ===
@@ -27,7 +41,6 @@ export type Character = {
 
 export type Monster = {
 	name: string;
-	emoji: string;
 	hp: number;
 	maxHp: number;
 };
@@ -36,20 +49,22 @@ export type Monster = {
 
 export type Customer = {
 	name: string;
-	emoji: string;
 	wantItem: Item;
-	budget: number;
+	maxBudget: number; // 出せる最高額
+	maxNegotiations: number; // 交渉可能回数（1～3）
+	currentNegotiation: number; // 現在の交渉回数
+	offeredPrice?: number; // 客が提示した価格
 	dialogue: string;
 };
 
 export const CUSTOMERS: Customer[] = [
-	{ name: 'まちのむすめ', emoji: '👩', wantItem: {} as Item, budget: 0, dialogue: '' },
-	{ name: 'たびのせんし', emoji: '⚔️', wantItem: {} as Item, budget: 0, dialogue: '' },
-	{ name: 'おかねもち', emoji: '🤵', wantItem: {} as Item, budget: 0, dialogue: '' },
-	{ name: 'まほうつかい', emoji: '🧙', wantItem: {} as Item, budget: 0, dialogue: '' },
-	{ name: 'ぼうけんしゃ', emoji: '🗡️', wantItem: {} as Item, budget: 0, dialogue: '' },
-	{ name: 'おじいさん', emoji: '👴', wantItem: {} as Item, budget: 0, dialogue: '' },
-	{ name: 'こどもの王子', emoji: '👑', wantItem: {} as Item, budget: 0, dialogue: '' },
+	{ name: 'まちのむすめ', wantItem: {} as Item, maxBudget: 0, maxNegotiations: 1, currentNegotiation: 0, dialogue: '' },
+	{ name: 'たびのせんし', wantItem: {} as Item, maxBudget: 0, maxNegotiations: 2, currentNegotiation: 0, dialogue: '' },
+	{ name: 'おかねもち', wantItem: {} as Item, maxBudget: 0, maxNegotiations: 3, currentNegotiation: 0, dialogue: '' },
+	{ name: 'まほうつかい', wantItem: {} as Item, maxBudget: 0, maxNegotiations: 2, currentNegotiation: 0, dialogue: '' },
+	{ name: 'ぼうけんしゃ', wantItem: {} as Item, maxBudget: 0, maxNegotiations: 1, currentNegotiation: 0, dialogue: '' },
+	{ name: 'おじいさん', wantItem: {} as Item, maxBudget: 0, maxNegotiations: 3, currentNegotiation: 0, dialogue: '' },
+	{ name: 'こどもの王子', wantItem: {} as Item, maxBudget: 0, maxNegotiations: 2, currentNegotiation: 0, dialogue: '' },
 ];
 
 // === 戦闘 ===
@@ -75,37 +90,43 @@ export const SHOP_COMMANDS: ShopCommand[] = [
 ];
 
 export const SHOP_ITEMS: Item[] = [
-	{ name: 'どうのつるぎ', emoji: '🗡️', price: 100, type: 'weapon', attack: 5 },
-	{ name: 'てつのつるぎ', emoji: '🗡️', price: 500, type: 'weapon', attack: 15 },
-	{ name: 'はがねのつるぎ', emoji: '⚔️', price: 1500, type: 'weapon', attack: 30 },
-	{ name: 'かわのたて', emoji: '🛡️', price: 80, type: 'armor', defense: 3 },
-	{ name: 'てつのたて', emoji: '🛡️', price: 300, type: 'armor', defense: 10 },
-	{ name: 'ぬののふく', emoji: '👕', price: 50, type: 'armor', defense: 2 },
-	{ name: 'くさりかたびら', emoji: '👕', price: 800, type: 'armor', defense: 18 },
+	{ name: 'どうのつるぎ', price: 100, type: 'weapon', attack: 5 },
+	{ name: 'てつのつるぎ', price: 500, type: 'weapon', attack: 15 },
+	{ name: 'はがねのつるぎ', price: 1500, type: 'weapon', attack: 30 },
+	{ name: 'かわのたて', price: 80, type: 'armor', defense: 3 },
+	{ name: 'てつのたて', price: 300, type: 'armor', defense: 10 },
+	{ name: 'ぬののふく', price: 50, type: 'armor', defense: 2 },
+	{ name: 'くさりかたびら', price: 800, type: 'armor', defense: 18 },
 ];
 
 // === 販売シーン ===
 
-export type SellShopCommand = 'うる' | 'ねびき' | 'ことわる' | 'みせをとじる';
+export type SellShopCommand = 'うる' | 'カウンター' | 'ことわる' | 'みせをとじる';
 
 export const SELL_SHOP_COMMANDS: SellShopCommand[] = [
 	'うる',
-	'ねびき',
+	'カウンター',
 	'ことわる',
 	'みせをとじる',
 ];
 
+export type SellShopPhase = 'setup' | 'selling' | 'negotiating' | 'counter_offer';
+
 export type SellShopState = {
+	displayItems: DisplayItem[];
 	customer: Customer | null;
 	sellMessage: string;
 	selectedCommand: number;
 	salesCount: number;
+	phase: SellShopPhase;
+	negotiationResult?: 'success' | 'failed' | 'gave_up';
+	counterOfferPrice?: number;
 	isWaiting: boolean;
 };
 
 // === 画面遷移 ===
 
-export type Scene = 'menu' | 'battle' | 'shop' | 'sell_shop';
+export type Scene = 'menu' | 'battle' | 'shop' | 'shop_setup' | 'sell_shop';
 
 export type MenuCommand = 'たたかう' | 'しいれ' | 'みせをひらく' | 'おわる';
 
@@ -121,8 +142,6 @@ export const MENU_COMMANDS: MenuCommand[] = [
 export type ShopMode = 'menu' | 'buy' | 'sell';
 
 export type ShopState = {
-	gold: number;
-	inventory: Item[];
 	shopMessage: string;
 	selectedMenuItem: number;
 	selectedItemIndex: number;
@@ -137,6 +156,8 @@ export type GameState = {
 	monster: Monster;
 	messages: string[];
 	selectedCommand: number;
+	gold: number;
+	inventory: InventoryItem[];
 	shop: ShopState;
 	sellShop: SellShopState;
 };

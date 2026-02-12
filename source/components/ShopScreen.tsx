@@ -42,9 +42,9 @@ export default function ShopScreen({ state, setState, changeScene }: Props) {
     });
 
     // 売る画面では所持品の半額を表示
-    const sellItems = shop.inventory.map(item => ({
-        ...item,
-        price: Math.floor(item.price / 2),
+    const sellItems = state.inventory.map(invItem => ({
+        ...invItem.item,
+        price: Math.floor(invItem.item.price / 2),
     }));
 
     return (
@@ -93,7 +93,7 @@ export default function ShopScreen({ state, setState, changeScene }: Props) {
                     )}
                 </BorderBox>
                 <BorderBox flexGrow={1}>
-                    <ShopInfo gold={shop.gold} party={state.party} />
+                    <ShopInfo gold={state.gold} party={state.party} />
                 </BorderBox>
             </Box>
 

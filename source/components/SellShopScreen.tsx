@@ -21,7 +21,7 @@ export default function SellShopScreen({ state, setState, changeScene }: Props) 
         changeScene,
     });
 
-    const { sellShop, shop } = state;
+    const { sellShop } = state;
 
     // 最初の客を呼ぶ
     React.useEffect(() => {
@@ -66,13 +66,13 @@ export default function SellShopScreen({ state, setState, changeScene }: Props) 
                 {customer ? (
                     <Box flexDirection="column" alignItems="center" paddingY={1}>
                         <Text bold>
-                            {customer.emoji} {customer.name}
+                            {customer.name}
                         </Text>
                         <Text> </Text>
                         <Text>「{customer.dialogue}」</Text>
                         <Text> </Text>
                         <Text dimColor>
-                            希望: {customer.wantItem.emoji} {customer.wantItem.name}　（定価 {customer.wantItem.price} G）
+                            希望: {customer.wantItem.name}　（定価 {customer.wantItem.price} G）
                         </Text>
                     </Box>
                 ) : (
@@ -110,10 +110,10 @@ export default function SellShopScreen({ state, setState, changeScene }: Props) 
                             {merchant.name} HP {merchant.hp}/{merchant.maxHp}
                         </Text>
                         <Text>
-                            所持金: <Text color="yellow">{shop.gold} G</Text>
+                            所持金: <Text color="yellow">{state.gold} G</Text>
                         </Text>
                         <Text>
-                            在庫: <Text color="cyan">{shop.inventory.length}個</Text>
+                            在庫: <Text color="cyan">{state.inventory.length}個</Text>
                         </Text>
                         <Text>
                             売上: <Text color="green">{sellShop.salesCount}件</Text>

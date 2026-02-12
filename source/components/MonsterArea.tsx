@@ -23,7 +23,7 @@ export default function MonsterArea({ monster }: Props) {
 
     return (
         <Box flexDirection="column" alignItems="center" paddingY={1}>
-            <Text>{monster.emoji} {monster.name}</Text>
+            <Text>{monster.name}</Text>
             <Text> </Text>
             <Box>
                 <Text>HP </Text>

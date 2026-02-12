@@ -24,7 +24,7 @@ export default function MainMenuScreen({ state, changeScene }: Props) {
             const command = MENU_COMMANDS[selected]!;
             switch (command) {
                 case 'みせをひらく': {
-                    changeScene('sell_shop');
+                    changeScene('shop_setup');
                     break;
                 }
 
@@ -74,7 +74,7 @@ export default function MainMenuScreen({ state, changeScene }: Props) {
                     ))}
                     <Text> </Text>
                     <Text>
-                        {'  '}所持金: <Text color="yellow">{state.shop.gold} G</Text>
+                        {'  '}所持金: <Text color="yellow">{state.gold} G</Text>
                     </Text>
                 </Box>
             </BorderBox>

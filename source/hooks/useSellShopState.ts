@@ -19,7 +19,7 @@ function generateCustomer(): Customer {
     const wantItem = SHOP_ITEMS[Math.floor(Math.random() * SHOP_ITEMS.length)]!;
     // 客の予算はアイテム定価の80%〜150%でランダム
     const budgetRate = 0.8 + Math.random() * 0.7;
-    const budget = Math.floor(wantItem.price * budgetRate);
+    const maxBudget = Math.floor(wantItem.price * budgetRate);
 
     const dialogues = [
         `${wantItem.name} が ほしいのですが…`,
@@ -32,7 +32,8 @@ function generateCustomer(): Customer {
     return {
         ...template,
         wantItem,
-        budget,
+        maxBudget,
+        currentNegotiation: 0,
         dialogue,
     };
 }
@@ -83,8 +84,8 @@ export function useSellShopState({ state, setState, changeScene }: UseSellShopSt
             if (!customer) return prev;
 
             // 在庫チェック
-            const itemIndex = prev.shop.inventory.findIndex(
-                i => i.name === customer.wantItem.name,
+            const itemIndex = prev.inventory.findIndex(
+                (invItem) => invItem.item.name === customer.wantItem.name,
             );
             if (itemIndex === -1) {
                 return {
@@ -97,16 +98,13 @@ export function useSellShopState({ state, setState, changeScene }: UseSellShopSt
             }
 
             const sellPrice = customer.wantItem.price;
-            const newInventory = [...prev.shop.inventory];
+            const newInventory = [...prev.inventory];
             newInventory.splice(itemIndex, 1);
 
             return {
                 ...prev,
-                shop: {
-                    ...prev.shop,
-                    gold: prev.shop.gold + sellPrice,
-                    inventory: newInventory,
-                },
+                gold: prev.gold + sellPrice,
+                inventory: newInventory,
                 sellShop: {
                     ...prev.sellShop,
                     sellMessage: `${customer.wantItem.name} を ${sellPrice} G で うりました！`,
@@ -124,8 +122,8 @@ export function useSellShopState({ state, setState, changeScene }: UseSellShopSt
             const { customer } = prev.sellShop;
             if (!customer) return prev;
 
-            const itemIndex = prev.shop.inventory.findIndex(
-                i => i.name === customer.wantItem.name,
+            const itemIndex = prev.inventory.findIndex(
+                (invItem) => invItem.item.name === customer.wantItem.name,
             );
             if (itemIndex === -1) {
                 return {
@@ -138,17 +136,14 @@ export function useSellShopState({ state, setState, changeScene }: UseSellShopSt
             }
 
             // 値引き: 客の予算で売る
-            const sellPrice = customer.budget;
-            const newInventory = [...prev.shop.inventory];
+            const sellPrice = customer.maxBudget;
+            const newInventory = [...prev.inventory];
             newInventory.splice(itemIndex, 1);
 
             return {
                 ...prev,
-                shop: {
-                    ...prev.shop,
-                    gold: prev.shop.gold + sellPrice,
-                    inventory: newInventory,
-                },
+                gold: prev.gold + sellPrice,
+                inventory: newInventory,
                 sellShop: {
                     ...prev.sellShop,
                     sellMessage: `ねびきして ${customer.wantItem.name} を ${sellPrice} G で うりました！`,
@@ -187,7 +182,7 @@ export function useSellShopState({ state, setState, changeScene }: UseSellShopSt
                 break;
             }
 
-            case 'ねびき': {
+            case 'カウンター': {
                 discount();
                 break;
             }

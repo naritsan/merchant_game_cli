@@ -28,13 +28,13 @@ export default function ItemList({ items, selectedIndex, showPrice = true }: Pro
                     <Text key={`${item.name}-${i}`}>
                         {isSelected ? (
                             <Text color="yellow" bold>
-                                ▶ {item.emoji} {item.name}
+                                ▶ {item.name}
                                 {priceText ? `  ${priceText}` : ''}
                             </Text>
                         ) : (
                             <Text>
                                 {'  '}
-                                {item.emoji} {item.name}
+                                {item.name}
                                 {priceText ? `  ${priceText}` : ''}
                             </Text>
                         )}

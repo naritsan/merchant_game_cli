@@ -48,7 +48,7 @@ export function useShopState({ state, setState, changeScene }: UseShopStateArgs)
                 });
             } else if (shop.mode === 'sell') {
                 updateShop(prev => {
-                    const len = Math.max(1, state.shop.inventory.length);
+                    const len = Math.max(1, state.inventory.length);
                     const next =
                         direction === 'up'
                             ? (prev.selectedItemIndex - 1 + len) % len
@@ -57,13 +57,13 @@ export function useShopState({ state, setState, changeScene }: UseShopStateArgs)
                 });
             }
         },
-        [shop.mode, state.shop.inventory.length, updateShop],
+        [shop.mode, state.inventory.length, updateShop],
     );
 
     const buyItem = useCallback(
         (item: Item) => {
             setState(prev => {
-                if (prev.shop.gold < item.price) {
+                if (prev.gold < item.price) {
                     return {
                         ...prev,
                         shop: {
@@ -73,12 +73,18 @@ export function useShopState({ state, setState, changeScene }: UseShopStateArgs)
                     };
                 }
 
+                // InventoryItem作成（仕入れ価格を記録）
+                const inventoryItem = {
+                    item,
+                    purchasePrice: item.price,
+                };
+
                 return {
                     ...prev,
+                    gold: prev.gold - item.price,
+                    inventory: [...prev.inventory, inventoryItem],
                     shop: {
                         ...prev.shop,
-                        gold: prev.shop.gold - item.price,
-                        inventory: [...prev.shop.inventory, item],
                         shopMessage: `${item.name} を かいました！`,
                     },
                 };
@@ -90,8 +96,8 @@ export function useShopState({ state, setState, changeScene }: UseShopStateArgs)
     const sellItem = useCallback(
         (index: number) => {
             setState(prev => {
-                const item = prev.shop.inventory[index];
-                if (!item) {
+                const inventoryItem = prev.inventory[index];
+                if (!inventoryItem) {
                     return {
                         ...prev,
                         shop: {
@@ -101,17 +107,17 @@ export function useShopState({ state, setState, changeScene }: UseShopStateArgs)
                     };
                 }
 
-                const sellPrice = Math.floor(item.price / 2);
-                const newInventory = [...prev.shop.inventory];
+                const sellPrice = Math.floor(inventoryItem.item.price / 2);
+                const newInventory = [...prev.inventory];
                 newInventory.splice(index, 1);
 
                 return {
                     ...prev,
+                    gold: prev.gold + sellPrice,
+                    inventory: newInventory,
                     shop: {
                         ...prev.shop,
-                        gold: prev.shop.gold + sellPrice,
-                        inventory: newInventory,
-                        shopMessage: `${item.name} を ${sellPrice} G で うりました！`,
+                        shopMessage: `${inventoryItem.item.name} を ${sellPrice} G で うりました！`,
                         selectedItemIndex: Math.min(
                             prev.shop.selectedItemIndex,
                             Math.max(0, newInventory.length - 1),

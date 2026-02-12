@@ -8,7 +8,6 @@ const initialState: GameState = {
     ],
     monster: {
         name: 'ドラゴン',
-        emoji: '🐉',
         hp: 80,
         maxHp: 100,
     },
@@ -16,19 +15,21 @@ const initialState: GameState = {
         'ドラゴンが あらわれた！',
     ],
     selectedCommand: 0,
+    gold: 100000,
+    inventory: [],
     shop: {
-        gold: 1000,
-        inventory: [],
         shopMessage: 'いらっしゃい！ なにを おもとめですか？',
         selectedMenuItem: 0,
         selectedItemIndex: 0,
         mode: 'menu',
     },
     sellShop: {
+        displayItems: [],
         customer: null,
         sellMessage: 'みせを ひらいた！',
         selectedCommand: 0,
         salesCount: 0,
+        phase: 'setup',
         isWaiting: false,
     },
 };
