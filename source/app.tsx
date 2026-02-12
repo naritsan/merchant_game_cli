@@ -3,7 +3,6 @@ import { useGameState } from './hooks/useGameState.js';
 import MainMenuScreen from './components/MainMenuScreen.js';
 import BattleScreen from './components/BattleScreen.js';
 import ShopScreen from './components/ShopScreen.js';
-// Import the missing component
 import SellShopScreen from './components/SellShopScreen.js';
 
 export default function App() {
@@ -12,9 +11,7 @@ export default function App() {
 
 	switch (state.scene) {
 		case 'menu': {
-			return (
-				<MainMenuScreen state={state} changeScene={changeScene} />
-			);
+			return <MainMenuScreen state={state} changeScene={changeScene} />;
 		}
 
 		case 'battle': {
@@ -38,7 +35,6 @@ export default function App() {
 			);
 		}
 
-		// Add the missing case for 'sell_shop'
 		case 'sell_shop': {
 			return (
 				<SellShopScreen
@@ -49,9 +45,6 @@ export default function App() {
 			);
 		}
 
-		// It is also good practice to return null for any unexpected case to satisfy TypeScript
-		default: {
-			return null;
-		}
+		// No default
 	}
 }
