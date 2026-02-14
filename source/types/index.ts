@@ -129,7 +129,7 @@ export type SellShopState = {
 
 export type Scene = 'menu' | 'battle' | 'shop' | 'shop_setup' | 'sell_shop' | 'inventory' | 'calendar' | 'fortune' | 'tips';
 
-export type MenuCommand = 'たたかう' | 'しいれ' | 'みせをひらく' | 'うらない' | 'カレンダー' | 'もちもの' | 'Tips' | 'やすむ' | 'おわる';
+export type MenuCommand = 'しいれ' | 'みせをひらく' | 'うらない' | 'カレンダー' | 'もちもの' | 'Tips' | 'やすむ' | 'おわる';
 
 export const MENU_COMMANDS: MenuCommand[] = [
 	'みせをひらく',

@@ -14,7 +14,7 @@ type Props = {
 type MenuMode = 'main' | 'submenu' | 'rest';
 
 const CATEGORIES = [
-    { id: 'action', label: 'こうどう', commands: ['みせをひらく', 'しいれ', 'たたかう', 'うらない'] },
+    { id: 'action', label: 'こうどう', commands: ['みせをひらく', 'しいれ', 'うらない'] },
     { id: 'system', label: 'システム', commands: ['もちもの', 'カレンダー', 'Tips'] },
 ] as const;
 
@@ -94,9 +94,6 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
                 break;
             case 'Tips':
                 changeScene('tips');
-                break;
-            case 'たたかう':
-                changeScene('battle');
                 break;
             case 'もちもの':
                 changeScene('inventory');
