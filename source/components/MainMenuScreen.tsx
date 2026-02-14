@@ -11,7 +11,7 @@ type Props = {
     advanceTime: (minutes: number) => void;
 };
 
-type MenuMode = 'main' | 'submenu' | 'rest';
+type MenuMode = 'main' | 'submenu' | 'rest' | 'confirm';
 
 const CATEGORIES = [
     { id: 'action', label: 'こうどう', commands: ['みせをひらく', 'しいれ', 'うらない'] },
@@ -24,7 +24,12 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
     const [selectedMain, setSelectedMain] = React.useState(0);
     const [selectedSub, setSelectedSub] = React.useState(0);
     const [restSelected, setRestSelected] = React.useState(0);
+    const [confirmSelected, setConfirmSelected] = React.useState(0);
     const [message, setMessage] = React.useState('');
+    const [confirmAction, setConfirmAction] = React.useState<{
+        message: string;
+        onConfirm: () => void;
+    } | null>(null);
 
     // 時間帯によるコマンド制御
     const isNight = state.hour >= 21;
@@ -46,6 +51,8 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
         { label: '明日(6:00)まで 休む', isSleep: true },
         { label: 'キャンセル', isCancel: true }
     ];
+
+    const confirmOptions = ['はい', 'いいえ'];
 
     const handleCommand = (command: string) => {
         switch (command) {
@@ -103,7 +110,12 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
                 setRestSelected(0);
                 break;
             case 'おわる':
-                exit();
+                setConfirmAction({
+                    message: 'ゲームを終了します。よろしいですか？',
+                    onConfirm: () => exit()
+                });
+                setMode('confirm');
+                setConfirmSelected(1); // デフォルトは「いいえ」
                 break;
         }
     };
@@ -132,7 +144,7 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
                     setMode('rest');
                     setRestSelected(0);
                 } else if (item === 'おわる') {
-                    exit();
+                    handleCommand('おわる');
                 }
             }
         } else if (mode === 'submenu') {
@@ -164,11 +176,19 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
                     return;
                 }
                 if (option.isSleep) {
-                    sleep();
-                    setMessage('翌日(06:00)まで 休んだ。');
+                    setConfirmAction({
+                        message: '明日まで休みます。よろしいですか？',
+                        onConfirm: () => {
+                            sleep();
+                            setMessage('翌日(06:00)まで 休んだ。');
+                        }
+                    });
+                    setMode('confirm');
+                    setConfirmSelected(0);
                 } else if (option.minutes) {
                     advanceTime(option.minutes);
                     setMessage(`${option.label.replace('休む', '休んだ')}。`);
+                    setMode('main');
                 } else if (option.targetHour !== undefined) {
                     const currentTotalMinutes = state.hour * 60 + state.minute;
                     const targetTotalMinutes = option.targetHour * 60;
@@ -177,8 +197,23 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
                         advanceTime(diff);
                         setMessage(`${option.label.replace('休む', '休んだ')}。`);
                     }
+                    setMode('main');
+                }
+            }
+        } else if (mode === 'confirm') {
+            if (key.leftArrow || key.upArrow) {
+                setConfirmSelected(0);
+            } else if (key.rightArrow || key.downArrow) {
+                setConfirmSelected(1);
+            } else if (key.escape) {
+                setMode('main');
+                setConfirmAction(null);
+            } else if (key.return) {
+                if (confirmSelected === 0) {
+                    confirmAction?.onConfirm();
                 }
                 setMode('main');
+                setConfirmAction(null);
             }
         }
     });
@@ -230,7 +265,7 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
                             selectedIndex={selectedSub}
                         />
                     </Box>
-                ) : (
+                ) : mode === 'rest' ? (
                     <Box flexDirection="column">
                         <Text bold color="green">  どのくらい 休む？</Text>
                         {isNight && <Text color="blue">  もう夜が更けてきた…</Text>}
@@ -239,12 +274,32 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
                             selectedIndex={restSelected}
                         />
                     </Box>
+                ) : (
+                    <Box flexDirection="column" paddingX={1}>
+                        <Text bold color="yellow">  {confirmAction?.message}</Text>
+                        <Box marginTop={1} justifyContent="center">
+                            {confirmOptions.map((opt, i) => (
+                                <Text key={opt}>
+                                    {i === confirmSelected ? (
+                                        <Text color="yellow" bold> ▶ {opt} </Text>
+                                    ) : (
+                                        <Text>   {opt} </Text>
+                                    )}
+                                    {i === 0 && '    '}
+                                </Text>
+                            ))}
+                        </Box>
+                    </Box>
                 )}
             </BorderBox>
 
             {/* Help */}
             <Box justifyContent="center" marginTop={1}>
-                <Text dimColor>↑↓: 選択  Enter: 決定  {mode !== 'main' ? 'Esc: 戻る' : ''}</Text>
+                {mode === 'confirm' ? (
+                    <Text dimColor>←→: 選択  Enter: 決定  Esc: キャンセル</Text>
+                ) : (
+                    <Text dimColor>↑↓: 選択  Enter: 決定  {mode !== 'main' ? 'Esc: 戻る' : ''}</Text>
+                )}
             </Box>
         </Box>
     );
