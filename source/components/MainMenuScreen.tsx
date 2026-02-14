@@ -54,6 +54,10 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
                             setMessage('もう 夜遅い。 寝る時間だ。');
                             return;
                         }
+                        if (state.dayOfWeek === 'Sunday') {
+                            setMessage('今日は 安息日 だ。 店を開くことはできない。');
+                            return;
+                        }
                         if (isAfterClose) {
                             setMessage('本日の営業は終了しました。');
                             return;
@@ -67,6 +71,10 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
                             setMessage('もう 夜遅い。 寝る時間だ。');
                             return;
                         }
+                        if (state.dayOfWeek === 'Sunday') {
+                            setMessage('今日は 安息日 だ。 市場も休みだ。');
+                            return;
+                        }
                         if (isBeforeOpen) {
                             setMessage('まだ 店が開いていない時間だ。(9:00開店)');
                             return;
@@ -76,6 +84,28 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
                             return;
                         }
                         changeScene('shop');
+                        break;
+                    }
+
+                    case 'うらない': {
+                        if (isNight) {
+                            setMessage('占い師も もう寝ている時間だ。');
+                            return;
+                        }
+                        if (state.isLuckRevealed) {
+                            setMessage('今日の運勢は もう占ってもらった。');
+                            return;
+                        }
+                        if (state.gold < 1000) {
+                            setMessage('お金が足りない！(1000G必要)');
+                            return;
+                        }
+                        changeScene('fortune');
+                        break;
+                    }
+
+                    case 'カレンダー': {
+                        changeScene('calendar');
                         break;
                     }
 

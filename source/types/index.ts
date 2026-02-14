@@ -127,13 +127,15 @@ export type SellShopState = {
 
 // === 画面遷移 ===
 
-export type Scene = 'menu' | 'battle' | 'shop' | 'shop_setup' | 'sell_shop' | 'inventory';
+export type Scene = 'menu' | 'battle' | 'shop' | 'shop_setup' | 'sell_shop' | 'inventory' | 'calendar' | 'fortune';
 
-export type MenuCommand = 'たたかう' | 'しいれ' | 'みせをひらく' | 'もちもの' | 'やすむ' | 'ねる' | 'おわる';
+export type MenuCommand = 'たたかう' | 'しいれ' | 'みせをひらく' | 'うらない' | 'カレンダー' | 'もちもの' | 'やすむ' | 'ねる' | 'おわる';
 
 export const MENU_COMMANDS: MenuCommand[] = [
 	'みせをひらく',
 	'しいれ',
+	'うらない',
+	'カレンダー',
 	'もちもの',
 	'やすむ',
 	'ねる',
@@ -166,4 +168,20 @@ export type GameState = {
 	day: number;
 	hour: number;
 	minute: number;
+	weather: Weather;
+	dayOfWeek: DayOfWeek;
+	luck: Luck;
+	isLuckRevealed: boolean;
 };
+
+// === 天気 ===
+export type Weather = 'sunny' | 'rainy' | 'snowy' | 'storm' | 'aurora';
+
+// === 曜日 ===
+export type DayOfWeek = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
+
+export const DAYS_OF_WEEK: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+// === 運勢 ===
+export type Luck = 'Divine' | 'Miracle' | 'Blessing' | 'Fortune' | 'Normal' | 'BadOmen' | 'Curse' | 'Doom' | 'Apocalypse';
+

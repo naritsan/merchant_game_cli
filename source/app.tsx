@@ -7,10 +7,12 @@ import ShopScreen from './components/ShopScreen.js';
 import ShopSetupScreen from './components/ShopSetupScreen.js';
 import SellShopScreen from './components/SellShopScreen.js';
 import InventoryScreen from './components/InventoryScreen.js';
+import CalendarScreen from './components/CalendarScreen.js';
+import FortuneScreen from './components/FortuneScreen.js';
 import Header from './components/Header.js';
 
 export default function App() {
-	const { state, setState, moveCommand, selectCommand, changeScene, sleep, advanceTime } =
+	const { state, setState, moveCommand, selectCommand, changeScene, sleep, advanceTime, revealLuck } =
 		useGameState();
 
 	const renderScene = () => {
@@ -72,6 +74,20 @@ export default function App() {
 
 			case 'inventory': {
 				return <InventoryScreen state={state} changeScene={changeScene} />;
+			}
+
+			case 'calendar': {
+				return <CalendarScreen state={state} changeScene={changeScene} />;
+			}
+
+			case 'fortune': {
+				return (
+					<FortuneScreen
+						state={state}
+						changeScene={changeScene}
+						revealLuck={revealLuck}
+					/>
+				);
 			}
 
 			default:

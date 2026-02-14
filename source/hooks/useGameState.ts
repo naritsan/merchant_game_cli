@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { type GameState, BATTLE_COMMANDS } from '../types/index.js';
+import { type GameState, type Weather, type DayOfWeek, type Luck, BATTLE_COMMANDS, DAYS_OF_WEEK } from '../types/index.js';
 
 const initialState: GameState = {
     scene: 'menu',
@@ -37,10 +37,52 @@ const initialState: GameState = {
     day: 1,
     hour: 9,
     minute: 0,
+    weather: 'sunny',
+    dayOfWeek: 'Monday',
+    luck: 'Normal', // 初期値はNormalにしておく（ランダムにするならuseGameState内で再設定）
+    isLuckRevealed: false,
 };
 
 export function useGameState() {
     const [state, setState] = useState<GameState>(initialState);
+
+
+    const determineWeather = (): Weather => {
+        const rand = Math.random() * 100;
+        if (rand < 80) return 'sunny';
+        if (rand < 99) return 'rainy';
+        if (rand < 99.5) return 'snowy';
+        if (rand < 99.8) return 'storm';
+        return 'aurora';
+    };
+
+    const determineLuck = (): Luck => {
+        const rand = Math.random() * 100;
+        if (rand < 1) return 'Divine';
+        if (rand < 10) return 'Miracle';
+        if (rand < 30) return 'Blessing';
+        if (rand < 50) return 'Fortune';
+        if (rand < 70) return 'Normal';
+        if (rand < 84) return 'BadOmen';
+        if (rand < 94) return 'Curse';
+        if (rand < 99) return 'Doom';
+        return 'Apocalypse';
+    };
+
+    const nextDayOfWeek = (current: DayOfWeek): DayOfWeek => {
+        const currentIndex = DAYS_OF_WEEK.indexOf(current);
+        return DAYS_OF_WEEK[(currentIndex + 1) % DAYS_OF_WEEK.length]!;
+    };
+
+    const updateDailyState = (prevState: GameState): Partial<GameState> => {
+        return {
+            day: prevState.day + 1,
+            weather: determineWeather(),
+            dayOfWeek: nextDayOfWeek(prevState.dayOfWeek),
+            luck: determineLuck(),
+            isLuckRevealed: false,
+        };
+    };
 
     const moveCommand = useCallback((direction: 'up' | 'down') => {
         setState(prev => {
@@ -78,21 +120,27 @@ export function useGameState() {
         setState(prev => {
             let newMinute = prev.minute + minutes;
             let newHour = prev.hour;
-            const newDay = prev.day;
+            let dayUpdate: Partial<GameState> = {};
 
             while (newMinute >= 60) {
                 newMinute -= 60;
                 newHour += 1;
             }
 
-            // 24時を超えた場合などの処理は必要に応じて追加
-            // 今回は営業終了などの制御は各コンポーネントで行う想定
+            while (newHour >= 24) {
+                newHour -= 24;
+                dayUpdate = updateDailyState(prev);
+                // 日付が変わったら、prevの内容ではなく、今計算した新しい日付情報を使う必要あがるところだが、
+                // updateDailyStateはday+1などを返すので、ここでは単にマージする。
+                // ただしループする（48時間進むとか）場合はロジックが複雑になるが、今回のゲームでは短時間経過が主。
+                // 念のため再帰的に呼び出すか、ループ対応するかだが、シンプルに1日またぎのみ対応とする。
+            }
 
             return {
                 ...prev,
+                ...dayUpdate,
                 hour: newHour,
                 minute: newMinute,
-                day: newDay,
             };
         });
     }, []);
@@ -100,7 +148,7 @@ export function useGameState() {
     const sleep = useCallback(() => {
         setState(prev => ({
             ...prev,
-            day: prev.day + 1,
+            ...updateDailyState(prev),
             hour: 6,
             minute: 0,
             messages: [...prev.messages, 'ぐっすり眠って 体力が回復した！'],
@@ -108,5 +156,15 @@ export function useGameState() {
         }));
     }, []);
 
-    return { state, setState, moveCommand, selectCommand, addMessage, changeScene, advanceTime, sleep };
+    const revealLuck = useCallback(() => {
+        setState(prev => {
+            return {
+                ...prev,
+                gold: prev.gold - 1000,
+                isLuckRevealed: true,
+            };
+        });
+    }, []);
+
+    return { state, setState, moveCommand, selectCommand, addMessage, changeScene, advanceTime, sleep, revealLuck };
 }
