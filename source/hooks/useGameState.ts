@@ -49,24 +49,17 @@ export function useGameState() {
 
     const determineWeather = (): Weather => {
         const rand = Math.random() * 100;
-        if (rand < 20) return 'sunny';
-        if (rand < 40) return 'rainy';
-        if (rand < 60) return 'snowy';
-        if (rand < 80) return 'storm';
+        if (rand < 80) return 'sunny';
+        if (rand < 99) return 'rainy';
+        if (rand < 99.5) return 'snowy';
+        if (rand < 99.8) return 'storm';
         return 'aurora';
     };
 
     const determineLuck = (): Luck => {
-        const rand = Math.random() * 100;
-        if (rand < 1) return 'Divine';
-        if (rand < 10) return 'Miracle';
-        if (rand < 30) return 'Blessing';
-        if (rand < 50) return 'Fortune';
-        if (rand < 70) return 'Normal';
-        if (rand < 84) return 'BadOmen';
-        if (rand < 94) return 'Curse';
-        if (rand < 99) return 'Doom';
-        return 'Apocalypse';
+        const lucks: Luck[] = ['Divine', 'Miracle', 'Blessing', 'Fortune', 'Normal', 'BadOmen', 'Curse', 'Doom', 'Apocalypse'];
+        const rand = Math.floor(Math.random() * lucks.length);
+        return lucks[rand]!;
     };
 
     const nextDayOfWeek = (current: DayOfWeek): DayOfWeek => {
