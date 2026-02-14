@@ -177,6 +177,8 @@ export type GameState = {
 // === 天気 ===
 export type Weather = 'sunny' | 'rainy' | 'snowy' | 'storm' | 'aurora';
 
+export const WEATHER_TYPES: Weather[] = ['sunny', 'rainy', 'snowy', 'storm', 'aurora'];
+
 // === 曜日 ===
 export type DayOfWeek = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
 
@@ -184,4 +186,6 @@ export const DAYS_OF_WEEK: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thu
 
 // === 運勢 ===
 export type Luck = 'Divine' | 'Miracle' | 'Blessing' | 'Fortune' | 'Normal' | 'BadOmen' | 'Curse' | 'Doom' | 'Apocalypse';
+
+export const LUCK_TYPES: Luck[] = ['Divine', 'Miracle', 'Blessing', 'Fortune', 'Normal', 'BadOmen', 'Curse', 'Doom', 'Apocalypse'];
 

@@ -2,29 +2,45 @@ import React from 'react';
 import { Box, Text, useApp, useInput } from 'ink';
 import BorderBox from './BorderBox.js';
 import CommandMenu from './CommandMenu.js';
-import { type GameState } from '../types/index.js';
+import { type GameState, LUCK_TYPES, WEATHER_TYPES, DAYS_OF_WEEK } from '../types/index.js';
 
 type Props = {
     state: GameState;
+    setState: React.Dispatch<React.SetStateAction<GameState>>;
     changeScene: (scene: GameState['scene']) => void;
     sleep: () => void;
     advanceTime: (minutes: number) => void;
 };
 
-type MenuMode = 'main' | 'submenu' | 'rest' | 'confirm';
+type MenuMode = 'main' | 'submenu' | 'rest' | 'confirm' | 'debug_menu' | 'debug_date' | 'debug_time' | 'debug_luck' | 'debug_weather' | 'debug_gold';
 
 const CATEGORIES = [
     { id: 'action', label: 'こうどう', commands: ['みせをひらく', 'しいれ', 'うらない'] },
     { id: 'system', label: 'システム', commands: ['もちもの', 'カレンダー', 'Tips'] },
+    { id: 'debug', label: 'デバッグ', commands: ['日付変更', '時間変更', '運勢変更', '天気変更', '所持金変更'] },
 ] as const;
 
-export default function MainMenuScreen({ state, changeScene, sleep, advanceTime }: Props) {
+const LUCK_LABELS: Record<string, string> = {
+    'Divine': '神の加護', 'Miracle': '奇跡', 'Blessing': '祝福', 'Fortune': '幸運',
+    'Normal': '平穏', 'BadOmen': '不吉', 'Curse': '呪い', 'Doom': '破滅', 'Apocalypse': '黙示録'
+};
+
+const WEATHER_LABELS: Record<string, string> = {
+    'sunny': '晴れ', 'rainy': '雨', 'snowy': '雪', 'storm': '嵐', 'aurora': 'オーロラ'
+};
+
+export default function MainMenuScreen({ state, setState, changeScene, sleep, advanceTime }: Props) {
     const { exit } = useApp();
     const [mode, setMode] = React.useState<MenuMode>('main');
     const [selectedMain, setSelectedMain] = React.useState(0);
     const [selectedSub, setSelectedSub] = React.useState(0);
     const [restSelected, setRestSelected] = React.useState(0);
     const [confirmSelected, setConfirmSelected] = React.useState(0);
+
+    // Debug Menu States
+    const [debugLuckSelected, setDebugLuckSelected] = React.useState(0);
+    const [debugWeatherSelected, setDebugWeatherSelected] = React.useState(0);
+
     const [message, setMessage] = React.useState('');
     const [confirmAction, setConfirmAction] = React.useState<{
         message: string;
@@ -36,7 +52,7 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
     const isBeforeOpen = state.hour < 9;
     const isAfterClose = state.hour >= 18;
 
-    const mainMenuItems = ['こうどう', 'システム', 'やすむ', 'おわる'];
+    const mainMenuItems = ['こうどう', 'システム', 'デバッグ', 'やすむ', 'おわる'];
     const currentCategory = selectedMain < CATEGORIES.length ? CATEGORIES[selectedMain] : null;
     const submenuItems = currentCategory ? [...currentCategory.commands, 'もどる'] : [];
 
@@ -105,6 +121,23 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
             case 'もちもの':
                 changeScene('inventory');
                 break;
+            case '日付変更':
+                setMode('debug_date');
+                break;
+            case '時間変更':
+                setMode('debug_time');
+                break;
+            case '運勢変更':
+                setMode('debug_luck');
+                setDebugLuckSelected(LUCK_TYPES.indexOf(state.luck));
+                break;
+            case '天気変更':
+                setMode('debug_weather');
+                setDebugWeatherSelected(WEATHER_TYPES.indexOf(state.weather));
+                break;
+            case '所持金変更':
+                setMode('debug_gold');
+                break;
             case 'やすむ':
                 setMode('rest');
                 setRestSelected(0);
@@ -118,6 +151,58 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
                 setConfirmSelected(1); // デフォルトは「いいえ」
                 break;
         }
+    };
+
+    const updateDate = (dayChange: number) => {
+        setState(prev => {
+            const newDay = Math.max(1, prev.day + dayChange);
+            const dayDiff = newDay - prev.day;
+            const currentDayIndex = DAYS_OF_WEEK.indexOf(prev.dayOfWeek);
+            const newDayIndex = (currentDayIndex + dayDiff) % 7;
+            const finalDayIndex = newDayIndex < 0 ? newDayIndex + 7 : newDayIndex;
+
+            return {
+                ...prev,
+                day: newDay,
+                dayOfWeek: DAYS_OF_WEEK[finalDayIndex]!
+            };
+        });
+    };
+
+    const updateTime = (minuteChange: number) => {
+        setState(prev => {
+            let newMinute = prev.minute + minuteChange;
+            let newHour = prev.hour;
+
+            while (newMinute >= 60) {
+                newMinute -= 60;
+                newHour += 1;
+            }
+            while (newMinute < 0) {
+                newMinute += 60;
+                newHour -= 1;
+            }
+
+            // 0時〜23時の範囲に収める（日付またぎは今回は考慮せずループさせる）
+            if (newHour >= 24) {
+                newHour = newHour % 24;
+            } else if (newHour < 0) {
+                newHour = (newHour % 24 + 24) % 24;
+            }
+
+            return {
+                ...prev,
+                hour: newHour,
+                minute: newMinute,
+            };
+        });
+    };
+
+    const updateGold = (amount: number) => {
+        setState(prev => ({
+            ...prev,
+            gold: Math.max(0, prev.gold + amount)
+        }));
     };
 
     useInput((_input, key) => {
@@ -138,6 +223,9 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
                     setMode('submenu');
                     setSelectedSub(0);
                 } else if (item === 'システム') {
+                    setMode('submenu');
+                    setSelectedSub(0);
+                } else if (item === 'デバッグ') {
                     setMode('submenu');
                     setSelectedSub(0);
                 } else if (item === 'やすむ') {
@@ -215,6 +303,46 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
                 setMode('main');
                 setConfirmAction(null);
             }
+        } else if (mode === 'debug_date') {
+            if (key.leftArrow) updateDate(-10);
+            if (key.rightArrow) updateDate(10);
+            if (key.downArrow) updateDate(-1);
+            if (key.upArrow) updateDate(1);
+            if (key.escape || key.return) setMode('submenu');
+        } else if (mode === 'debug_time') {
+            if (key.leftArrow) updateTime(-60); // 1時間
+            if (key.rightArrow) updateTime(60); // 1時間
+            if (key.downArrow) updateTime(-30);
+            if (key.upArrow) updateTime(30);
+            if (key.escape || key.return) setMode('submenu');
+        } else if (mode === 'debug_luck') {
+            if (key.upArrow) {
+                setDebugLuckSelected(prev => (prev - 1 + LUCK_TYPES.length) % LUCK_TYPES.length);
+            } else if (key.downArrow) {
+                setDebugLuckSelected(prev => (prev + 1) % LUCK_TYPES.length);
+            } else if (key.escape) {
+                setMode('submenu');
+            } else if (key.return) {
+                setState(prev => ({ ...prev, luck: LUCK_TYPES[debugLuckSelected]!, isLuckRevealed: true }));
+                setMode('submenu');
+            }
+        } else if (mode === 'debug_weather') {
+            if (key.upArrow) {
+                setDebugWeatherSelected(prev => (prev - 1 + WEATHER_TYPES.length) % WEATHER_TYPES.length);
+            } else if (key.downArrow) {
+                setDebugWeatherSelected(prev => (prev + 1) % WEATHER_TYPES.length);
+            } else if (key.escape) {
+                setMode('submenu');
+            } else if (key.return) {
+                setState(prev => ({ ...prev, weather: WEATHER_TYPES[debugWeatherSelected]! }));
+                setMode('submenu');
+            }
+        } else if (mode === 'debug_gold') {
+            if (key.leftArrow) updateGold(-1000);
+            if (key.rightArrow) updateGold(1000);
+            if (key.downArrow) updateGold(-100);
+            if (key.upArrow) updateGold(100);
+            if (key.escape || key.return) setMode('submenu');
         }
     });
 
@@ -274,6 +402,43 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
                             selectedIndex={restSelected}
                         />
                     </Box>
+                ) : mode === 'debug_date' ? (
+                    <Box flexDirection="column" alignItems="center">
+                        <Text bold color="yellow">【日付変更】</Text>
+                        <Text>Day: {state.day} ({state.dayOfWeek})</Text>
+                        <Text dimColor>← -10 / +10 →</Text>
+                        <Text dimColor>↓ -1 / +1 ↑</Text>
+                    </Box>
+                ) : mode === 'debug_time' ? (
+                    <Box flexDirection="column" alignItems="center">
+                        <Text bold color="yellow">【時間変更】</Text>
+                        <Text>{String(state.hour).padStart(2, '0')}:{String(state.minute).padStart(2, '0')}</Text>
+                        <Text dimColor>← -1時間 / +1時間 →</Text>
+                        <Text dimColor>↓ -30分 / +30分 ↑</Text>
+                    </Box>
+                ) : mode === 'debug_luck' ? (
+                    <Box flexDirection="column">
+                        <Text bold color="yellow">【運勢変更】</Text>
+                        <CommandMenu
+                            items={LUCK_TYPES.map(l => `${l} (${LUCK_LABELS[l]})`)}
+                            selectedIndex={debugLuckSelected}
+                        />
+                    </Box>
+                ) : mode === 'debug_weather' ? (
+                    <Box flexDirection="column">
+                        <Text bold color="yellow">【天気変更】</Text>
+                        <CommandMenu
+                            items={WEATHER_TYPES.map(w => `${w} (${WEATHER_LABELS[w]})`)}
+                            selectedIndex={debugWeatherSelected}
+                        />
+                    </Box>
+                ) : mode === 'debug_gold' ? (
+                    <Box flexDirection="column" alignItems="center">
+                        <Text bold color="yellow">【所持金変更】</Text>
+                        <Text>所持金: {state.gold} G</Text>
+                        <Text dimColor>← -1000 / +1000 →</Text>
+                        <Text dimColor>↓ -100 / +100 ↑</Text>
+                    </Box>
                 ) : (
                     <Box flexDirection="column" paddingX={1}>
                         <Text bold color="yellow">  {confirmAction?.message}</Text>
@@ -297,6 +462,8 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
             <Box justifyContent="center" marginTop={1}>
                 {mode === 'confirm' ? (
                     <Text dimColor>←→: 選択  Enter: 決定  Esc: キャンセル</Text>
+                ) : ['debug_date', 'debug_time', 'debug_gold'].includes(mode) ? (
+                    <Text dimColor>矢印キー: 変更  Enter/Esc: 戻る</Text>
                 ) : (
                     <Text dimColor>↑↓: 選択  Enter: 決定  {mode !== 'main' ? 'Esc: 戻る' : ''}</Text>
                 )}

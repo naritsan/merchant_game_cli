@@ -22,6 +22,7 @@ export default function App() {
 				return (
 					<MainMenuScreen
 						state={state}
+						setState={setState}
 						changeScene={changeScene}
 						sleep={sleep}
 						advanceTime={advanceTime}
