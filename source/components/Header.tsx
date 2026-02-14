@@ -54,9 +54,7 @@ export default function Header({ state }: Props) {
     return (
         <Box justifyContent="space-between" marginY={1} paddingX={1} width={60}>
             <Box>
-                <Text bold color="yellow">Merchant Game</Text>
-                <Text> </Text>
-                <Text bold color="yellow">{state.gold}G</Text>
+                <Text bold color="yellow">所持金: {state.gold}G</Text>
             </Box>
             <Box>
                 <Text bold>{timeString}</Text>
