@@ -32,6 +32,7 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
         { label: '1時間 休む', minutes: 60 },
         ...(state.hour < 9 ? [{ label: '開店(9:00)まで 休む', targetHour: 9 }] : []),
         ...(state.hour < 18 ? [{ label: '閉店(18:00)まで 休む', targetHour: 18 }] : []),
+        { label: '明日(6:00)まで 休む', isSleep: true },
         { label: 'キャンセル', isCancel: true }
     ];
 
@@ -124,7 +125,10 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
                     return;
                 }
 
-                if (option.minutes) {
+                if (option.isSleep) {
+                    sleep();
+                    setMessage('翌日(06:00)まで 休んだ。');
+                } else if (option.minutes) {
                     advanceTime(option.minutes);
                     setMessage(`${option.label.replace('休む', '休んだ')}。`);
                 } else if (option.targetHour !== undefined) {
