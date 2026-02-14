@@ -118,7 +118,14 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
                 setSelectedMain(prev => (prev + 1) % mainMenuItems.length);
             } else if (key.return) {
                 const item = mainMenuItems[selectedMain];
-                if (item === 'こうどう' || item === 'システム') {
+                if (item === 'こうどう') {
+                    if (isNight) {
+                        setMessage('もう 夜遅い。行動は控えよう。');
+                        return;
+                    }
+                    setMode('submenu');
+                    setSelectedSub(0);
+                } else if (item === 'システム') {
                     setMode('submenu');
                     setSelectedSub(0);
                 } else if (item === 'やすむ') {
