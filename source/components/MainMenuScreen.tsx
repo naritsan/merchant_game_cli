@@ -109,6 +109,11 @@ export default function MainMenuScreen({ state, changeScene, sleep, advanceTime 
                         break;
                     }
 
+                    case 'Tips': {
+                        changeScene('tips');
+                        break;
+                    }
+
                     case 'たたかう': {
                         if (isNight) return;
                         changeScene('battle');

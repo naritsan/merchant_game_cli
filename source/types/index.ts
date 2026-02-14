@@ -127,9 +127,9 @@ export type SellShopState = {
 
 // === 画面遷移 ===
 
-export type Scene = 'menu' | 'battle' | 'shop' | 'shop_setup' | 'sell_shop' | 'inventory' | 'calendar' | 'fortune';
+export type Scene = 'menu' | 'battle' | 'shop' | 'shop_setup' | 'sell_shop' | 'inventory' | 'calendar' | 'fortune' | 'tips';
 
-export type MenuCommand = 'たたかう' | 'しいれ' | 'みせをひらく' | 'うらない' | 'カレンダー' | 'もちもの' | 'やすむ' | 'ねる' | 'おわる';
+export type MenuCommand = 'たたかう' | 'しいれ' | 'みせをひらく' | 'うらない' | 'カレンダー' | 'もちもの' | 'Tips' | 'やすむ' | 'ねる' | 'おわる';
 
 export const MENU_COMMANDS: MenuCommand[] = [
 	'みせをひらく',
@@ -137,6 +137,7 @@ export const MENU_COMMANDS: MenuCommand[] = [
 	'うらない',
 	'カレンダー',
 	'もちもの',
+	'Tips',
 	'やすむ',
 	'ねる',
 	'おわる',

@@ -9,6 +9,7 @@ import SellShopScreen from './components/SellShopScreen.js';
 import InventoryScreen from './components/InventoryScreen.js';
 import CalendarScreen from './components/CalendarScreen.js';
 import FortuneScreen from './components/FortuneScreen.js';
+import TipsScreen from './components/TipsScreen.js';
 import Header from './components/Header.js';
 
 export default function App() {
@@ -88,6 +89,10 @@ export default function App() {
 						revealLuck={revealLuck}
 					/>
 				);
+			}
+
+			case 'tips': {
+				return <TipsScreen changeScene={changeScene} />;
 			}
 
 			default:
