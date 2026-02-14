@@ -15,11 +15,12 @@ type Props = {
     state: GameState;
     setState: React.Dispatch<React.SetStateAction<GameState>>;
     changeScene: (scene: GameState['scene']) => void;
+    advanceTime: (minutes: number) => void;
 };
 
-export default function ShopScreen({ state, setState, changeScene }: Props) {
+export default function ShopScreen({ state, setState, changeScene, advanceTime }: Props) {
     const { moveMenuItem, selectMenuItem, selectItem, goBackToMenu } =
-        useShopState({ state, setState, changeScene });
+        useShopState({ state, setState, changeScene, advanceTime });
 
     const { shop } = state;
 
@@ -37,6 +38,8 @@ export default function ShopScreen({ state, setState, changeScene }: Props) {
         } else if (key.escape) {
             if (shop.mode !== 'menu') {
                 goBackToMenu();
+            } else {
+                changeScene('menu');
             }
         }
     });
@@ -65,10 +68,31 @@ export default function ShopScreen({ state, setState, changeScene }: Props) {
             {shop.mode !== 'menu' && (
                 <BorderBox>
                     {shop.mode === 'buy' ? (
-                        <ItemList
-                            items={SHOP_ITEMS}
-                            selectedIndex={shop.selectedItemIndex}
-                        />
+                        <Box flexDirection="row" width="100%">
+                            <Box flexDirection="column" width="55%">
+                                <Text bold underline>商品リスト (卸値)</Text>
+                                <ItemList
+                                    items={SHOP_ITEMS}
+                                    selectedIndex={shop.selectedItemIndex}
+                                    renderItem={(item) => {
+                                        const price = Math.floor(item.price * 0.6);
+                                        return `${item.name} ${price} G`;
+                                    }}
+                                />
+                            </Box>
+                            <Box flexDirection="column" width="45%" paddingLeft={1}>
+                                <Text bold underline>もちもの</Text>
+                                {state.inventory.length === 0 ? (
+                                    <Text dimColor>なし</Text>
+                                ) : (
+                                    state.inventory.map((inv, i) => (
+                                        <Text key={i} dimColor>
+                                            {inv.item.name}
+                                        </Text>
+                                    ))
+                                )}
+                            </Box>
+                        </Box>
                     ) : (
                         <ItemList
                             items={sellItems}

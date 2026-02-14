@@ -7,54 +7,145 @@ import { type GameState, MENU_COMMANDS } from '../types/index.js';
 type Props = {
     state: GameState;
     changeScene: (scene: GameState['scene']) => void;
+    sleep: () => void;
+    advanceTime: (minutes: number) => void;
 };
 
-export default function MainMenuScreen({ state, changeScene }: Props) {
+export default function MainMenuScreen({ state, changeScene, sleep, advanceTime }: Props) {
     const { exit } = useApp();
     const [selected, setSelected] = React.useState(0);
+    const [message, setMessage] = React.useState('');
+    const [mode, setMode] = React.useState<'menu' | 'rest'>('menu');
+    const [restSelected, setRestSelected] = React.useState(0);
+
+    // 時間帯によるコマンド制御
+    const isNight = state.hour >= 21;
+    const isBeforeOpen = state.hour < 9;
+    const isAfterClose = state.hour >= 18;
+
+    const availableCommands = isNight
+        ? ['ねる', 'おわる']
+        : MENU_COMMANDS.filter(cmd => cmd !== 'ねる');
+
+    const restOptions = [
+        { label: '30分 休む', minutes: 30 },
+        { label: '1時間 休む', minutes: 60 },
+        ...(state.hour < 9 ? [{ label: '開店(9:00)まで 休む', targetHour: 9 }] : []),
+        ...(state.hour < 18 ? [{ label: '閉店(18:00)まで 休む', targetHour: 18 }] : []),
+        { label: 'キャンセル', isCancel: true }
+    ];
 
     useInput((_input, key) => {
-        if (key.upArrow) {
-            setSelected(prev =>
-                (prev - 1 + MENU_COMMANDS.length) % MENU_COMMANDS.length,
-            );
-        } else if (key.downArrow) {
-            setSelected(prev => (prev + 1) % MENU_COMMANDS.length);
-        } else if (key.return) {
-            const command = MENU_COMMANDS[selected]!;
-            switch (command) {
-                case 'みせをひらく': {
-                    changeScene('shop_setup');
-                    break;
+        setMessage(''); // 入力があるたびにメッセージをクリア
+
+        if (mode === 'menu') {
+            if (key.upArrow) {
+                setSelected(prev =>
+                    (prev - 1 + availableCommands.length) % availableCommands.length,
+                );
+            } else if (key.downArrow) {
+                setSelected(prev => (prev + 1) % availableCommands.length);
+            } else if (key.return) {
+                const command = availableCommands[selected]!;
+                switch (command) {
+                    case 'みせをひらく': {
+                        if (isNight) {
+                            setMessage('もう 夜遅い。 寝る時間だ。');
+                            return;
+                        }
+                        if (isAfterClose) {
+                            setMessage('本日の営業は終了しました。');
+                            return;
+                        }
+                        changeScene('shop_setup');
+                        break;
+                    }
+
+                    case 'しいれ': {
+                        if (isNight) {
+                            setMessage('もう 夜遅い。 寝る時間だ。');
+                            return;
+                        }
+                        if (isBeforeOpen) {
+                            setMessage('まだ 店が開いていない時間だ。(9:00開店)');
+                            return;
+                        }
+                        if (isAfterClose) {
+                            setMessage('市場は もう閉まっている。(18:00閉店)');
+                            return;
+                        }
+                        changeScene('shop');
+                        break;
+                    }
+
+                    case 'たたかう': {
+                        if (isNight) return;
+                        changeScene('battle');
+                        break;
+                    }
+
+                    case 'もちもの': {
+                        if (isNight) return; // 夜はもちものも見れない仕様にするなら
+                        changeScene('inventory');
+                        break;
+                    }
+
+                    case 'やすむ': {
+                        setMode('rest');
+                        setRestSelected(0);
+                        break;
+                    }
+
+                    case 'ねる': {
+                        sleep();
+                        setMessage('翌日になった！');
+                        break;
+                    }
+
+                    case 'おわる': {
+                        exit();
+                        break;
+                    }
+
+                    // No default
+                }
+            }
+        } else if (mode === 'rest') {
+            if (key.upArrow) {
+                setRestSelected(prev => (prev - 1 + restOptions.length) % restOptions.length);
+            } else if (key.downArrow) {
+                setRestSelected(prev => (prev + 1) % restOptions.length);
+            } else if (key.escape) {
+                setMode('menu');
+            } else if (key.return) {
+                const option = restOptions[restSelected]!;
+                if (option.isCancel) {
+                    setMode('menu');
+                    return;
                 }
 
-                case 'しいれ': {
-                    changeScene('shop');
-                    break;
+                if (option.minutes) {
+                    advanceTime(option.minutes);
+                    setMessage(`${option.label.replace('休む', '休んだ')}。`);
+                } else if (option.targetHour !== undefined) {
+                    const currentTotalMinutes = state.hour * 60 + state.minute;
+                    const targetTotalMinutes = option.targetHour * 60;
+                    const diff = targetTotalMinutes - currentTotalMinutes;
+                    if (diff > 0) {
+                        advanceTime(diff);
+                        setMessage(`${option.label.replace('休む', '休んだ')}。`);
+                    }
                 }
-
-                case 'たたかう': {
-                    changeScene('battle');
-                    break;
-                }
-
-                case 'おわる': {
-                    exit();
-                    break;
-                }
-
-                // No default
+                setMode('menu');
             }
         }
     });
 
     return (
         <Box flexDirection="column" width={60}>
-            {/* Title */}
-            <Box justifyContent="center" marginY={1}>
-                <Text bold color="yellow">
-                    ⚔️  Merchant Game  ⚔️
-                </Text>
+            {/* Message Area */}
+            <Box height={1} justifyContent="center">
+                {message ? <Text color="red">{message}</Text> : null}
             </Box>
 
             {/* Party Status Summary */}
@@ -79,17 +170,27 @@ export default function MainMenuScreen({ state, changeScene }: Props) {
                 </Box>
             </BorderBox>
 
-            {/* Menu */}
+            {/* Menu or Rest Menu */}
             <BorderBox>
-                <CommandMenu
-                    items={MENU_COMMANDS as unknown as string[]}
-                    selectedIndex={selected}
-                />
+                {mode === 'rest' ? (
+                    <Box flexDirection="column">
+                        <Text bold color="green">  どのくらい 休む？</Text>
+                        <CommandMenu
+                            items={restOptions.map(o => o.label)}
+                            selectedIndex={restSelected}
+                        />
+                    </Box>
+                ) : (
+                    <CommandMenu
+                        items={availableCommands}
+                        selectedIndex={selected}
+                    />
+                )}
             </BorderBox>
 
             {/* Help */}
             <Box justifyContent="center" marginTop={1}>
-                <Text dimColor>↑↓: 選択  Enter: 決定</Text>
+                <Text dimColor>↑↓: 選択  Enter: 決定  {mode === 'rest' ? 'Esc: キャンセル' : ''}</Text>
             </Box>
         </Box>
     );

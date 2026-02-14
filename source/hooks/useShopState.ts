@@ -11,9 +11,10 @@ type UseShopStateArgs = {
     state: GameState;
     setState: React.Dispatch<React.SetStateAction<GameState>>;
     changeScene: (scene: GameState['scene']) => void;
+    advanceTime: (minutes: number) => void;
 };
 
-export function useShopState({ state, setState, changeScene }: UseShopStateArgs) {
+export function useShopState({ state, setState, changeScene, advanceTime }: UseShopStateArgs) {
     const { shop } = state;
 
     const updateShop = useCallback(
@@ -62,8 +63,10 @@ export function useShopState({ state, setState, changeScene }: UseShopStateArgs)
 
     const buyItem = useCallback(
         (item: Item) => {
+            const purchasePrice = Math.floor(item.price * 0.6); // 卸値は定価の60%
+
             setState(prev => {
-                if (prev.gold < item.price) {
+                if (prev.gold < purchasePrice) {
                     return {
                         ...prev,
                         shop: {
@@ -76,21 +79,31 @@ export function useShopState({ state, setState, changeScene }: UseShopStateArgs)
                 // InventoryItem作成（仕入れ価格を記録）
                 const inventoryItem = {
                     item,
-                    purchasePrice: item.price,
+                    purchasePrice,
                 };
 
                 return {
                     ...prev,
-                    gold: prev.gold - item.price,
+                    gold: prev.gold - purchasePrice,
                     inventory: [...prev.inventory, inventoryItem],
                     shop: {
                         ...prev.shop,
-                        shopMessage: `${item.name} を かいました！`,
+                        shopMessage: `${item.name} を ${purchasePrice} G で かいました！`,
                     },
                 };
             });
+            // 購入成功時に時間経過
+            // 実際にはsetStateの中で成功判定をするのが難しいが、
+            // ここでは簡易的に「購入処理が走ったら」時間を進める。
+            // ただし、金不足で買えなかった場合も進んでしまう？
+            // buyItem内のsetStateは関数型更新なので、外からは結果がわからない。
+            // しかし、金不足チェックはstate.goldで行っている。
+            // ここでstate.goldをチェックすればよい。
+            if (state.gold >= Math.floor(item.price * 0.6)) {
+                advanceTime(30);
+            }
         },
-        [setState],
+        [setState, advanceTime, state.gold],
     );
 
     const sellItem = useCallback(

@@ -22,7 +22,6 @@ export type InventoryItem = {
 export type DisplayItem = {
 	inventoryItem: InventoryItem;
 	price: number; // 値札（商人が設定）
-	stockId: number; // 在庫配列のインデックス
 };
 
 // === キャラクター ===
@@ -51,7 +50,6 @@ export type Customer = {
 	name: string;
 	wantItem: Item;
 	maxBudget: number; // 出せる最高額
-	targetStockId: number; // 狙っている在庫商品のID
 	targetPrice: number; // その時の値札価格
 	maxNegotiations: number; // 交渉可能回数（1～3）
 	currentNegotiation: number; // 現在の交渉回数
@@ -60,13 +58,13 @@ export type Customer = {
 };
 
 export const CUSTOMERS: Customer[] = [
-	{ name: 'まちのむすめ', wantItem: {} as Item, maxBudget: 0, targetStockId: -1, targetPrice: 0, maxNegotiations: 1, currentNegotiation: 0, dialogue: '' },
-	{ name: 'たびのせんし', wantItem: {} as Item, maxBudget: 0, targetStockId: -1, targetPrice: 0, maxNegotiations: 2, currentNegotiation: 0, dialogue: '' },
-	{ name: 'おかねもち', wantItem: {} as Item, maxBudget: 0, targetStockId: -1, targetPrice: 0, maxNegotiations: 3, currentNegotiation: 0, dialogue: '' },
-	{ name: 'まほうつかい', wantItem: {} as Item, maxBudget: 0, targetStockId: -1, targetPrice: 0, maxNegotiations: 2, currentNegotiation: 0, dialogue: '' },
-	{ name: 'ぼうけんしゃ', wantItem: {} as Item, maxBudget: 0, targetStockId: -1, targetPrice: 0, maxNegotiations: 1, currentNegotiation: 0, dialogue: '' },
-	{ name: 'おじいさん', wantItem: {} as Item, maxBudget: 0, targetStockId: -1, targetPrice: 0, maxNegotiations: 3, currentNegotiation: 0, dialogue: '' },
-	{ name: 'こどもの王子', wantItem: {} as Item, maxBudget: 0, targetStockId: -1, targetPrice: 0, maxNegotiations: 2, currentNegotiation: 0, dialogue: '' },
+	{ name: 'まちのむすめ', wantItem: {} as Item, maxBudget: 0, targetPrice: 0, maxNegotiations: 0, currentNegotiation: 0, dialogue: '' },
+	{ name: 'たびのせんし', wantItem: {} as Item, maxBudget: 0, targetPrice: 0, maxNegotiations: 2, currentNegotiation: 0, dialogue: '' },
+	{ name: 'おかねもち', wantItem: {} as Item, maxBudget: 0, targetPrice: 0, maxNegotiations: 3, currentNegotiation: 0, dialogue: '' },
+	{ name: 'まほうつかい', wantItem: {} as Item, maxBudget: 0, targetPrice: 0, maxNegotiations: 2, currentNegotiation: 0, dialogue: '' },
+	{ name: 'ぼうけんしゃ', wantItem: {} as Item, maxBudget: 0, targetPrice: 0, maxNegotiations: 0, currentNegotiation: 0, dialogue: '' },
+	{ name: 'おじいさん', wantItem: {} as Item, maxBudget: 0, targetPrice: 0, maxNegotiations: 3, currentNegotiation: 0, dialogue: '' },
+	{ name: 'こどもの王子', wantItem: {} as Item, maxBudget: 0, targetPrice: 0, maxNegotiations: 2, currentNegotiation: 0, dialogue: '' },
 ];
 
 // === 戦闘 ===
@@ -86,7 +84,6 @@ export type ShopCommand = 'かう' | 'うる' | 'そうび' | 'やめる';
 
 export const SHOP_COMMANDS: ShopCommand[] = [
 	'かう',
-	'うる',
 	'そうび',
 	'やめる',
 ];
@@ -103,11 +100,11 @@ export const SHOP_ITEMS: Item[] = [
 
 // === 販売シーン ===
 
-export type SellShopCommand = 'うる' | 'カウンター' | 'ことわる' | 'みせをとじる';
+export type SellShopCommand = 'うる' | 'ねびき' | 'ことわる' | 'みせをとじる';
 
 export const SELL_SHOP_COMMANDS: SellShopCommand[] = [
 	'うる',
-	'カウンター',
+	'ねびき',
 	'ことわる',
 	'みせをとじる',
 ];
@@ -124,18 +121,22 @@ export type SellShopState = {
 	negotiationResult?: 'success' | 'failed' | 'gave_up';
 	counterOfferPrice?: number;
 	isWaiting: boolean;
+	currentSales: number;
+	currentProfit: number;
 };
 
 // === 画面遷移 ===
 
-export type Scene = 'menu' | 'battle' | 'shop' | 'shop_setup' | 'sell_shop';
+export type Scene = 'menu' | 'battle' | 'shop' | 'shop_setup' | 'sell_shop' | 'inventory';
 
-export type MenuCommand = 'たたかう' | 'しいれ' | 'みせをひらく' | 'おわる';
+export type MenuCommand = 'たたかう' | 'しいれ' | 'みせをひらく' | 'もちもの' | 'やすむ' | 'ねる' | 'おわる';
 
 export const MENU_COMMANDS: MenuCommand[] = [
 	'みせをひらく',
 	'しいれ',
-	'たたかう',
+	'もちもの',
+	'やすむ',
+	'ねる',
 	'おわる',
 ];
 
@@ -162,4 +163,7 @@ export type GameState = {
 	inventory: InventoryItem[];
 	shop: ShopState;
 	sellShop: SellShopState;
+	day: number;
+	hour: number;
+	minute: number;
 };
