@@ -18,27 +18,45 @@ const STEPS = [
 ];
 
 export default function FortuneScreen({ state, changeScene, revealLuck }: Props) {
+    const [phase, setPhase] = useState<'confirm' | 'fortune'>('confirm');
+    const [selected, setSelected] = useState(0); // 0: はじめる, 1: やめる
     const [step, setStep] = useState(0);
     const [isFinished, setIsFinished] = useState(false);
 
     useEffect(() => {
-        if (step < STEPS.length) {
-            const timer = setTimeout(() => {
-                setStep(prev => prev + 1);
-            }, STEPS[step]!.wait);
-            return () => clearTimeout(timer);
-        } else {
-            if (!state.isLuckRevealed) {
-                revealLuck();
+        if (phase === 'fortune') {
+            if (step < STEPS.length) {
+                const timer = setTimeout(() => {
+                    setStep(prev => prev + 1);
+                }, STEPS[step]!.wait);
+                return () => clearTimeout(timer);
+            } else {
+                if (!state.isLuckRevealed) {
+                    revealLuck();
+                }
+                setIsFinished(true);
             }
-            setIsFinished(true);
         }
         return undefined;
-    }, [step, state.isLuckRevealed, revealLuck]);
+    }, [phase, step, state.isLuckRevealed, revealLuck]);
 
     useInput((_input, key) => {
-        if (isFinished && (key.return || key.escape)) {
-            changeScene('menu');
+        if (phase === 'confirm') {
+            if (key.leftArrow || key.rightArrow) {
+                setSelected(prev => (prev === 0 ? 1 : 0));
+            } else if (key.return) {
+                if (selected === 0) {
+                    setPhase('fortune');
+                } else {
+                    changeScene('menu');
+                }
+            } else if (key.escape) {
+                changeScene('menu');
+            }
+        } else {
+            if (isFinished && (key.return || key.escape)) {
+                changeScene('menu');
+            }
         }
     });
 
@@ -79,7 +97,17 @@ export default function FortuneScreen({ state, changeScene, revealLuck }: Props)
                 <Box flexDirection="column" paddingX={1} minHeight={5}>
                     <Text bold color="magenta">=== 占い小屋 ===</Text>
                     <Text> </Text>
-                    {step < STEPS.length ? (
+                    {phase === 'confirm' ? (
+                        <Box flexDirection="column">
+                            <Text>占い師: 「1000G で 今日の運勢を占ってしんぜよう...」</Text>
+                            <Text> </Text>
+                            <Box>
+                                <Text color={selected === 0 ? 'cyan' : 'white'}>{selected === 0 ? '> ' : '  '}はい</Text>
+                                <Text>    </Text>
+                                <Text color={selected === 1 ? 'cyan' : 'white'}>{selected === 1 ? '> ' : '  '}いいえ</Text>
+                            </Box>
+                        </Box>
+                    ) : step < STEPS.length ? (
                         <Text>{STEPS[step]?.text}</Text>
                     ) : (
                         <Box flexDirection="column">
@@ -96,9 +124,9 @@ export default function FortuneScreen({ state, changeScene, revealLuck }: Props)
                     )}
                 </Box>
             </BorderBox>
-            {isFinished && (
+            {(phase === 'confirm' || isFinished) && (
                 <Box justifyContent="center" marginTop={1}>
-                    <Text dimColor>Enter: 戻る</Text>
+                    <Text dimColor>矢印キー: 選択  Enter: 決定</Text>
                 </Box>
             )}
         </Box>
