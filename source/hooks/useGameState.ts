@@ -158,8 +158,25 @@ export function useGameState() {
 
     const revealLuck = useCallback(() => {
         setState(prev => {
+            let newMinute = prev.minute + 30;
+            let newHour = prev.hour;
+            let dayUpdate: Partial<GameState> = {};
+
+            while (newMinute >= 60) {
+                newMinute -= 60;
+                newHour += 1;
+            }
+
+            while (newHour >= 24) {
+                newHour -= 24;
+                dayUpdate = updateDailyState(prev);
+            }
+
             return {
                 ...prev,
+                ...dayUpdate,
+                hour: newHour,
+                minute: newMinute,
                 gold: prev.gold - 1000,
                 isLuckRevealed: true,
             };
