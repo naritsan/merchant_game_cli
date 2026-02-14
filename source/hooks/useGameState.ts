@@ -49,10 +49,10 @@ export function useGameState() {
 
     const determineWeather = (): Weather => {
         const rand = Math.random() * 100;
-        if (rand < 80) return 'sunny';
-        if (rand < 99) return 'rainy';
-        if (rand < 99.5) return 'snowy';
-        if (rand < 99.8) return 'storm';
+        if (rand < 20) return 'sunny';
+        if (rand < 40) return 'rainy';
+        if (rand < 60) return 'snowy';
+        if (rand < 80) return 'storm';
         return 'aurora';
     };
 

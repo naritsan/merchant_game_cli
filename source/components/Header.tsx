@@ -12,7 +12,7 @@ const getWeatherInfo = (weather: Weather): { icon: string; label: string; color:
         case 'rainy': return { icon: '☂', label: '雨', color: 'blue' };
         case 'snowy': return { icon: '☃', label: '雪', color: 'white' };
         case 'storm': return { icon: '⛈', label: '嵐', color: 'red' };
-        case 'aurora': return { icon: '🌌', label: '極光', color: 'magenta' };
+        case 'aurora': return { icon: '🌌', label: 'オーロラ', color: 'magenta' };
         default: return { icon: '?', label: '不明', color: 'gray' };
     }
 };
