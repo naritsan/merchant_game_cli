@@ -33,9 +33,8 @@ export function useShopSetupState({ setState, changeScene, advanceTime }: UseSho
                     },
                 };
             });
-            advanceTime(30);
         },
-        [setState, advanceTime],
+        [setState],
     );
 
     // 陳列から削除
@@ -65,9 +64,15 @@ export function useShopSetupState({ setState, changeScene, advanceTime }: UseSho
 
     // 開店
     const openShop = useCallback(() => {
-        // 時間チェック
+        // まず準備時間として1時間経過させる
+        advanceTime(60);
+
+        // 時間経過後の状態に基づいて、開店可能か判断する
+        // setStateは関数型更新なので、直前のadvanceTime（の中のsetState）の結果を引き継ぐ
         setState(prev => {
             if (prev.hour >= 18) {
+                // 18時を過ぎてしまった場合は強制的にメニューへ
+                changeScene('menu');
                 return {
                     ...prev,
                     sellShop: {
@@ -76,6 +81,9 @@ export function useShopSetupState({ setState, changeScene, advanceTime }: UseSho
                     }
                 };
             }
+
+            // 開店成功
+            changeScene('sell_shop');
             return {
                 ...prev,
                 sellShop: {
@@ -85,18 +93,7 @@ export function useShopSetupState({ setState, changeScene, advanceTime }: UseSho
                 },
             };
         });
-
-        // 状態を反映した後に遷移するかどうかを判断するため、本来はここでstateを見る必要がある
-        // シンプルに、hour >= 18だったらメニューに戻るようにする
-        setState(prev => {
-            if (prev.hour >= 18) {
-                changeScene('menu');
-            } else {
-                changeScene('sell_shop');
-            }
-            return prev;
-        });
-    }, [setState, changeScene]);
+    }, [setState, advanceTime, changeScene]);
 
     return {
         addToDisplay,

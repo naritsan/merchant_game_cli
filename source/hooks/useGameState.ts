@@ -15,7 +15,7 @@ const initialState: GameState = {
         'ドラゴンが あらわれた！',
     ],
     selectedCommand: 0,
-    gold: 100000,
+    gold: 3000,
     inventory: [],
     shop: {
         shopMessage: 'いらっしゃい！ なにを おもとめですか？',
@@ -35,7 +35,7 @@ const initialState: GameState = {
         currentProfit: 0,
     },
     day: 1,
-    hour: 6,
+    hour: 9,
     minute: 0,
 };
 

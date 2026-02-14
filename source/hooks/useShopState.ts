@@ -92,18 +92,9 @@ export function useShopState({ state, setState, changeScene, advanceTime }: UseS
                     },
                 };
             });
-            // 購入成功時に時間経過
-            // 実際にはsetStateの中で成功判定をするのが難しいが、
-            // ここでは簡易的に「購入処理が走ったら」時間を進める。
-            // ただし、金不足で買えなかった場合も進んでしまう？
-            // buyItem内のsetStateは関数型更新なので、外からは結果がわからない。
-            // しかし、金不足チェックはstate.goldで行っている。
-            // ここでstate.goldをチェックすればよい。
-            if (state.gold >= Math.floor(item.price * 0.6)) {
-                advanceTime(30);
-            }
+            // 購入成功時に以前は時間を進めていましたが、店を出るときに一括で進めるように変更しました。
         },
-        [setState, advanceTime, state.gold],
+        [setState, state.gold],
     );
 
     const sellItem = useCallback(
@@ -174,7 +165,7 @@ export function useShopState({ state, setState, changeScene, advanceTime }: UseS
                 updateShop(() => ({
                     shopMessage: 'またのおこしを おまちしています！',
                 }));
-                changeScene('menu');
+                exitShop();
                 break;
             }
 
@@ -200,5 +191,10 @@ export function useShopState({ state, setState, changeScene, advanceTime }: UseS
         }));
     }, [updateShop]);
 
-    return { moveMenuItem, selectMenuItem, selectItem, goBackToMenu };
+    const exitShop = useCallback(() => {
+        advanceTime(60); // 店を出るときに1時間経過
+        changeScene('menu');
+    }, [advanceTime, changeScene]);
+
+    return { moveMenuItem, selectMenuItem, selectItem, goBackToMenu, exitShop };
 }

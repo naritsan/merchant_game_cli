@@ -19,7 +19,7 @@ type Props = {
 };
 
 export default function ShopScreen({ state, setState, changeScene, advanceTime }: Props) {
-    const { moveMenuItem, selectMenuItem, selectItem, goBackToMenu } =
+    const { moveMenuItem, selectMenuItem, selectItem, goBackToMenu, exitShop } =
         useShopState({ state, setState, changeScene, advanceTime });
 
     const { shop } = state;
@@ -39,7 +39,7 @@ export default function ShopScreen({ state, setState, changeScene, advanceTime }
             if (shop.mode !== 'menu') {
                 goBackToMenu();
             } else {
-                changeScene('menu');
+                exitShop();
             }
         }
     });
