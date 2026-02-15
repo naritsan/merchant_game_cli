@@ -306,18 +306,22 @@ export default function LedgerScreen({ state, changeScene }: Props) {
                 </Box>
 
                 <Box borderStyle="single" borderColor="magenta" flexDirection="column" paddingX={1} marginBottom={0}>
-                    <Text bold color="magenta">その他指標</Text>
+                    <Text bold color="magenta">その他指標 (Other Metrics)</Text>
+
+                    {/* Row 1: Avg Spend */}
+                    <Box flexDirection="row" justifyContent="space-between" marginBottom={1}>
+                        <Text>客単価 (平均購入額):</Text>
+                        <Text bold>{avgCustomerSpend} G</Text>
+                    </Box>
+
+                    {/* Row 2: Max Records */}
                     <Box flexDirection="row" justifyContent="space-between">
-                        <Box flexDirection="column" width="45%">
-                            <Text>客単価 (平均):</Text>
-                            <Text bold>{avgCustomerSpend} G</Text>
-                        </Box>
-                        <Box flexDirection="column" width="45%">
-                            <Text>最高売上:</Text>
+                        <Box flexDirection="column" width="48%">
+                            <Text>最高売上 (Best Sales):</Text>
                             <Text>{maxSalesDay ? `${maxSalesDay.day}日目 (${maxSalesDay.totalSales} G)` : '-'}</Text>
                         </Box>
-                        <Box flexDirection="column" width="45%">
-                            <Text>最高利益:</Text>
+                        <Box flexDirection="column" width="48%">
+                            <Text>最高利益 (Best Profit):</Text>
                             <Text>{maxProfitDay ? `${maxProfitDay.day}日目 (${maxProfitDay.profit} G)` : '-'}</Text>
                         </Box>
                     </Box>
