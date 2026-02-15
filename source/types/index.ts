@@ -172,6 +172,7 @@ export type GameState = {
 	dayOfWeek: DayOfWeek;
 	luck: Luck;
 	isLuckRevealed: boolean;
+	showCustomerBudget: boolean; // デバッグ用：客の予算を表示するか
 };
 
 // === 天気 ===

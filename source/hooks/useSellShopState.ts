@@ -6,7 +6,9 @@ import {
     type DisplayItem,
     CUSTOMERS,
     SELL_SHOP_COMMANDS,
+    type Luck,
 } from '../types/index.js';
+import { getCustomerBudgetMultiplier } from '../utils/luckUtils.js';
 
 type UseSellShopStateArgs = {
     state: GameState;
@@ -15,16 +17,17 @@ type UseSellShopStateArgs = {
     advanceTime: (minutes: number) => void;
 };
 
-function generateCustomer(displayItems: DisplayItem[]): Customer | null {
+function generateCustomer(displayItems: DisplayItem[], luck: Luck): Customer | null {
     if (displayItems.length === 0) return null;
 
     const template = CUSTOMERS[Math.floor(Math.random() * CUSTOMERS.length)]!;
     const targetDisplayItem = displayItems[Math.floor(Math.random() * displayItems.length)]!;
     const wantItem = targetDisplayItem.inventoryItem.item;
 
-    // 客の予算はアイテム定価の80%〜200%でランダム
-    const budgetRate = 0.8 + Math.random() * 1.2;
-    const maxBudget = Math.floor(wantItem.price * budgetRate);
+    // 客の予算はアイテム定価の80%〜110%でランダム
+    const budgetRate = 0.8 + Math.random() * 0.3;
+    // 運勢補正を適用
+    const maxBudget = Math.floor(wantItem.price * budgetRate * getCustomerBudgetMultiplier(luck));
 
     const dialogues = [
         `${wantItem.name} が ほしいのですが…`,
@@ -73,7 +76,7 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
 
     // 客を呼ぶ
     const summonCustomer = useCallback(() => {
-        const customer = generateCustomer(state.sellShop.displayItems);
+        const customer = generateCustomer(state.sellShop.displayItems, state.luck);
 
         if (!customer) {
             updateSellShop(() => ({

@@ -39,9 +39,10 @@ const initialState: GameState = {
     hour: 9,
     minute: 0,
     weather: 'sunny',
-    dayOfWeek: 'Sunday', // 1年4月1日は日曜(1/1が月曜の場合)
-    luck: 'Normal', // 初期値はNormalにしておく（ランダムにするならuseGameState内で再設定）
+    dayOfWeek: 'Monday', // 1年4月1日は月曜
+    luck: 'Normal', // 初期値はNormal
     isLuckRevealed: false,
+    showCustomerBudget: false,
 };
 
 export function useGameState() {
@@ -58,9 +59,18 @@ export function useGameState() {
     };
 
     const determineLuck = (): Luck => {
-        const lucks: Luck[] = ['Divine', 'Miracle', 'Blessing', 'Fortune', 'Normal', 'BadOmen', 'Curse', 'Doom', 'Apocalypse'];
-        const rand = Math.floor(Math.random() * lucks.length);
-        return lucks[rand]!;
+        const rand = Math.random() * 100;
+
+        // 累積確率で判定
+        if (rand < 1) return 'Divine';        // 1%
+        if (rand < 4) return 'Miracle';       // 3% (1+3)
+        if (rand < 14) return 'Blessing';     // 10% (4+10)
+        if (rand < 34) return 'Fortune';      // 20% (14+20)
+        if (rand < 66) return 'Normal';       // 32% (34+32)
+        if (rand < 86) return 'BadOmen';      // 20% (66+20)
+        if (rand < 96) return 'Curse';        // 10% (86+10)
+        if (rand < 99) return 'Doom';         // 3% (96+3)
+        return 'Apocalypse';                  // 1% (99+1)
     };
 
     const updateDailyState = (prevState: GameState): Partial<GameState> => {

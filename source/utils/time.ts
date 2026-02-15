@@ -88,9 +88,10 @@ export const getGameDate = (totalDays: number): GameDate => {
     const day = daysRemaining + 1; // 1-indexed
 
     // Calculate DayOfWeek
-    // Assuming Day 1 (Year 1, Month 1, Day 1) is Monday
-    // If Day 1 is Monday, index 0.
-    const dayOfWeekIndex = (totalDays - 1) % 7;
+    // Assuming Day 1 (Year 1, Month 1, Day 1) is now Tuesday so that Day 91 (Apr 1) is Monday
+    // Before: Day 1 (Mon) -> Day 91 (Sun)
+    // After: Day 1 (Tue) -> Day 91 (Mon)
+    const dayOfWeekIndex = (totalDays) % 7;
     const dayOfWeek = DAYS_OF_WEEK[dayOfWeekIndex] as DayOfWeek;
 
     const season = getSeason(month);

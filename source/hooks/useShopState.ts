@@ -6,6 +6,7 @@ import {
     SHOP_COMMANDS,
     SHOP_ITEMS,
 } from '../types/index.js';
+import { getPurchaseCostMultiplier } from '../utils/luckUtils.js';
 
 type UseShopStateArgs = {
     state: GameState;
@@ -63,7 +64,8 @@ export function useShopState({ state, setState, changeScene, advanceTime }: UseS
 
     const buyItem = useCallback(
         (item: Item) => {
-            const purchasePrice = Math.floor(item.price * 0.6); // 卸値は定価の60%
+            // 卸値は定価の60% * 運勢補正
+            const purchasePrice = Math.floor(item.price * 0.6 * getPurchaseCostMultiplier(state.luck));
 
             setState(prev => {
                 if (prev.gold < purchasePrice) {

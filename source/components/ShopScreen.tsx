@@ -10,6 +10,7 @@ import {
     SHOP_ITEMS,
 } from '../types/index.js';
 import { useShopState } from '../hooks/useShopState.js';
+import { getPurchaseCostMultiplier } from '../utils/luckUtils.js';
 
 type Props = {
     state: GameState;
@@ -75,7 +76,7 @@ export default function ShopScreen({ state, setState, changeScene, advanceTime }
                                     items={SHOP_ITEMS}
                                     selectedIndex={shop.selectedItemIndex}
                                     renderItem={(item) => {
-                                        const price = Math.floor(item.price * 0.6);
+                                        const price = Math.floor(item.price * 0.9 * getPurchaseCostMultiplier(state.luck));
                                         return `${item.name} ${price} G`;
                                     }}
                                 />

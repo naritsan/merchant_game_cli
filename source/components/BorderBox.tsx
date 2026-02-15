@@ -6,14 +6,15 @@ type Props = {
     height?: number;
     children: React.ReactNode;
     flexGrow?: number;
+    flexDirection?: 'row' | 'column';
 };
 
-export default function BorderBox({ width, height, children, flexGrow }: Props) {
+export default function BorderBox({ width, height, children, flexGrow, flexDirection = 'column' }: Props) {
     return (
         <Box
-            flexDirection="column"
+            flexDirection={flexDirection}
             width={width}
-            minHeight={height}
+            height={height}
             borderStyle="single"
             paddingX={1}
             flexGrow={flexGrow}

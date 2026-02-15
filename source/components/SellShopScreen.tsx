@@ -110,44 +110,41 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
             </Box>
 
             <Box>
-                {/* Main Content Area */}
-                <Box flexDirection="column" flexGrow={2}>
-                    {/* Customer Area */}
-                    <BorderBox>
-                        {customer ? (
-                            <Box flexDirection="column" alignItems="center" paddingY={1}>
-                                <Text bold>
-                                    {customer.name}
-                                </Text>
-                                <Text> </Text>
-                                <Text>「{customer.dialogue}」</Text>
-                                <Text> </Text>
-                                <Text dimColor>
-                                    希望: {customer.wantItem.name}
-                                </Text>
-                                <Text color="yellow">
-                                    提示: {customer.targetPrice} G <Text dimColor>(定価 {customer.wantItem.price} G)</Text>
-                                </Text>
-                            </Box>
-                        ) : (
-                            <Box justifyContent="center" paddingY={1}>
-                                <Text dimColor>きゃくを まっています…</Text>
-                            </Box>
-                        )}
+                {/* Main Content Area (Left: Customer & Message) */}
+                <Box flexDirection="column" width={40}>
+                    {/* Customer Area (Top) */}
+                    <BorderBox height={10} flexDirection="column">
+                        <Box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
+                            {customer ? (
+                                <>
+                                    <Text bold>{customer.name}</Text>
+                                    <Text> </Text>
+                                    <Text>希望: {customer.wantItem.name}</Text>
+                                    <Text>提示: <Text color="yellow">{customer.targetPrice} G</Text></Text>
+                                    {state.showCustomerBudget && (
+                                        <Text dimColor>(予算: {customer.maxBudget} G)</Text>
+                                    )}
+                                </>
+                            ) : (
+                                <Box alignItems="center" justifyContent="center" height={6}>
+                                    <Text dimColor>きゃくを まっています…</Text>
+                                </Box>
+                            )}
+                        </Box>
                     </BorderBox>
 
-                    {/* Message */}
-                    <BorderBox>
+                    {/* Message Area (Bottom) */}
+                    <BorderBox height={6} flexDirection="column">
                         <Text>{sellShop.sellMessage}</Text>
                         {sellShop.isWaiting && (
-                            <Text dimColor>　（Enter で つぎのきゃく）</Text>
+                            <Text dimColor>（Enter で つぎのきゃく）</Text>
                         )}
                     </BorderBox>
                 </Box>
 
-                {/* Side Panel: Display Items */}
-                <Box flexDirection="column" marginLeft={1} width={30}>
-                    <BorderBox>
+                {/* Side Panel (Right: Display List) */}
+                <Box flexDirection="column" marginLeft={1} width={20}>
+                    <BorderBox flexGrow={1}>
                         <Text bold>陳列リスト</Text>
                         <Text> </Text>
                         {sellShop.displayItems.length === 0 ? (
@@ -155,12 +152,12 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                         ) : (
                             displayItemsSlice.map((item, i) => (
                                 <Text key={i}>
-                                    {item.inventoryItem.item.name.slice(0, 8)}... {item.price}G
+                                    {item.inventoryItem.item.name.slice(0, 6)} {item.price}
                                 </Text>
                             ))
                         )}
                         {sellShop.displayItems.length > VISIBLE_ITEMS && (
-                            <Text dimColor>...他 {sellShop.displayItems.length - VISIBLE_ITEMS} 件</Text>
+                            <Text dimColor>他{sellShop.displayItems.length - VISIBLE_ITEMS}件</Text>
                         )}
                     </BorderBox>
                 </Box>

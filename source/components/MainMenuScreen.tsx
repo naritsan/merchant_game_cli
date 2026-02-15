@@ -17,7 +17,7 @@ type MenuMode = 'main' | 'submenu' | 'rest' | 'confirm' | 'debug_menu' | 'debug_
 const CATEGORIES = [
     { id: 'action', label: 'こうどう', commands: ['みせをひらく', 'しいれ', 'うらない'] },
     { id: 'system', label: 'システム', commands: ['もちもの', 'カレンダー', 'Tips'] },
-    { id: 'debug', label: 'デバッグ', commands: ['日付変更', '時間変更', '運勢変更', '天気変更', '所持金変更'] },
+    { id: 'debug', label: 'デバッグ', commands: ['日付変更', '時間変更', '運勢変更', '天気変更', '所持金変更', '客予算表示切替'] },
 ] as const;
 
 const LUCK_LABELS: Record<string, string> = {
@@ -137,6 +137,10 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
                 break;
             case '所持金変更':
                 setMode('debug_gold');
+                break;
+            case '客予算表示切替':
+                setState(prev => ({ ...prev, showCustomerBudget: !prev.showCustomerBudget }));
+                setMessage(`客の予算表示を ${!state.showCustomerBudget ? 'ON' : 'OFF'} にしました。`);
                 break;
             case 'やすむ':
                 setMode('rest');
