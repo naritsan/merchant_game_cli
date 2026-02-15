@@ -41,13 +41,19 @@ export default function LedgerScreen({ state, changeScene }: Props) {
         }
 
         if (key.upArrow) {
-            setScrollIndex(prev => Math.max(0, prev - 1));
+            if (activeTab === 'dashboard') {
+                // Dashboard side scrolling (shift days)
+                setScrollIndex(prev => Math.max(0, prev - 1));
+            } else {
+                setScrollIndex(prev => Math.max(0, prev - 1));
+            }
         } else if (key.downArrow) {
             const maxRows =
                 activeTab === 'history' ? reversedTransactions.length :
                     activeTab === 'analysis' ? itemAnalysis.length :
-                        activeTab === 'dashboard' ? dailyAnalysis.length : 0;
+                        activeTab === 'dashboard' ? Math.max(0, dailyAnalysis.length - 30) : 0; // Approx visible width
 
+            // standard scrolling
             setScrollIndex(prev => Math.min(Math.max(0, maxRows - VISIBLE_ROWS), prev + 1));
         }
     });
@@ -137,84 +143,117 @@ export default function LedgerScreen({ state, changeScene }: Props) {
     };
 
     const renderDashboard = () => {
-        const visibleData = dailyAnalysis.slice(scrollIndex, scrollIndex + VISIBLE_ROWS);
+        // Vertical Stacked Bar Chart
+        const CHART_HEIGHT = 10;
+        const CHART_WIDTH_DAYS = 30; // Max days to show on screen
 
-        // Helper to get a "nice" round number for the scale
+        // Prepare data: last N days, or respecting scroll?
+        // Let's just show the last N days for simplicity in "Dashboard" mode, or use scroll to shift the window.
+        // Assuming dailyAnalysis is sorted by day ascending.
+
+        // Use scrollIndex to window the data if we have many days
+        // scrollIndex 0 = show latest? or show from day 1?
+        // Usually dashboards show latest data by default.
+        // Let's make it so it shows the *latest* days, and scrolling moves back in time?
+        // Or standard: scrollIndex determines *start* index.
+        // Let's start with showing the LATEST data (end of array) by default.
+        // But for consistency with other tabs, scrollIndex usually starts at 0 (top/start).
+        // Let's stick to simple slicing: standard list logic? 
+        // No, user wants X-axis date.
+        // Let's slice based on scrollIndex, up to CHART_WIDTH_DAYS.
+
+        const startIndex = Math.max(0, dailyAnalysis.length - CHART_WIDTH_DAYS - scrollIndex);
+        const endIndex = Math.min(dailyAnalysis.length, startIndex + CHART_WIDTH_DAYS);
+        const visibleData = dailyAnalysis.slice(startIndex, endIndex);
+
+        if (visibleData.length === 0) {
+            return <Box flexGrow={1} alignItems="center" justifyContent="center"><Text dimColor>データなし</Text></Box>;
+        }
+
+        // Auto Scale Logic
+        const maxValRaw = Math.max(1, ...visibleData.map(d => Math.max(d.totalSales, d.profit)));
         const getNiceMax = (num: number) => {
             if (num <= 0) return 100;
             const digits = Math.floor(Math.log10(num));
             const base = Math.pow(10, digits);
-            const lead = num / base; // e.g. 800 -> 8, 1200 -> 1.2
-
-            // Round up to nearest nice factor
+            const lead = num / base;
             let shadow;
             if (lead <= 1) shadow = 1;
             else if (lead <= 2) shadow = 2;
             else if (lead <= 5) shadow = 5;
             else shadow = 10;
-
             return shadow * base;
         };
+        const maxVal = getNiceMax(maxValRaw);
 
-        const rawMax = Math.max(1, ...visibleData.map(d => Math.max(d.totalSales, Math.abs(d.profit))));
-        const maxVal = getNiceMax(rawMax);
-        const BAR_WIDTH = 30;
+        const rows: React.ReactNode[] = [];
 
-        return (
-            <Box flexDirection="column" flexGrow={1}>
-                {/* Header with Scale Info */}
-                <Box borderStyle="single" borderTop={false} borderLeft={false} borderRight={false} borderColor="gray">
-                    <Box width={6}><Text dimColor>Day</Text></Box>
-                    <Box width={9} justifyContent="flex-end"><Text dimColor>売上</Text></Box>
-                    <Box width={9} justifyContent="flex-end"><Text dimColor>利益</Text></Box>
-                    <Box width={BAR_WIDTH + 2} paddingLeft={1}>
-                        <Text dimColor>Gauge (Scale: 0 ~ {maxVal})</Text>
+        // Build Rows (Top to Bottom)
+        for (let i = CHART_HEIGHT - 1; i >= 0; i--) {
+
+            const yLabel = i === CHART_HEIGHT - 1 ? maxVal.toString() :
+                i === 0 ? "0" :
+                    i === Math.floor(CHART_HEIGHT / 2) ? Math.floor(maxVal / 2).toString() : "";
+
+            const rowCells = visibleData.map(d => {
+                const salesHeight = (d.totalSales / maxVal) * CHART_HEIGHT;
+                const profitHeight = (d.profit / maxVal) * CHART_HEIGHT; // Profit could be negative?
+
+                // Simplified: assuming positive profit for stacking visualization
+                // If negative profit, maybe show red block at bottom?
+                // Visualizing: Stacked [Profit][Cost] = Sales
+                // So Profit is at the bottom, Sales is Total Height.
+
+                const isProfit = i < profitHeight;
+                const isSales = i < salesHeight;
+
+                if (isProfit && d.profit > 0) return <Text key={d.day} color="green">█</Text>;
+                if (isSales) return <Text key={d.day} color="cyan">░</Text>; // Cost portion
+                if (d.profit < 0 && i === 0) return <Text key={d.day} color="red">█</Text>; // Indicate loss at bottom row
+                return <Text key={d.day} dimColor>·</Text>;
+            });
+
+            rows.push(
+                <Box key={i} flexDirection="row">
+                    <Box width={6} justifyContent="flex-end" marginRight={1}>
+                        <Text dimColor>{yLabel}</Text>
+                    </Box>
+                    <Box flexDirection="row">
+                        {rowCells}
                     </Box>
                 </Box>
+            );
+        }
 
-                {visibleData.length === 0 ? (
-                    <Box flexGrow={1} alignItems="center" justifyContent="center"><Text dimColor>データなし</Text></Box>
-                ) : (
-                    visibleData.map((d) => {
-                        const salesRatio = Math.min(1, Math.max(0, d.totalSales / maxVal));
-                        const profitRatio = Math.min(1, Math.max(0, Math.abs(d.profit) / maxVal));
+        // X-Axis Labels (Day)
+        // Show every 2nd or 3rd day to save space if needed, or vertical? 
+        // Let's just show last digit for each column to align perfectly.
+        const xLabels = visibleData.map(d => {
+            const dayStr = d.day.toString();
+            const label = dayStr.length > 1 ? dayStr.slice(-1) : dayStr;
+            return <Text key={d.day} dimColor>{label}</Text>;
+        });
 
-                        const salesLen = Math.floor(salesRatio * BAR_WIDTH);
-                        const profitLen = Math.floor(profitRatio * BAR_WIDTH);
-
-                        const profitColor = d.profit >= 0 ? 'green' : 'red';
-
-                        // Create gauge strings
-                        // Sales Gauge
-                        const salesBar = '█'.repeat(salesLen);
-                        const salesEmpty = '·'.repeat(BAR_WIDTH - salesLen);
-
-                        // Profit Gauge
-                        const profitBar = '█'.repeat(profitLen);
-                        const profitEmpty = '·'.repeat(BAR_WIDTH - profitLen);
-
-                        return (
-                            <Box key={d.day} flexDirection="column" marginBottom={0} borderStyle="single" borderBottom={false} borderLeft={false} borderRight={false} borderTop={false} borderColor="gray">
-                                <Box flexDirection="row">
-                                    <Box width={6}><Text>{d.day}日</Text></Box>
-                                    <Box width={9} justifyContent="flex-end"><Text>{d.totalSales}G</Text></Box>
-                                    <Box width={9} justifyContent="flex-end"><Text color={profitColor}>{d.profit}G</Text></Box>
-                                    <Box width={BAR_WIDTH + 2} paddingLeft={1}>
-                                        <Text color="cyan">{salesBar}</Text>
-                                        <Text dimColor>{salesEmpty}</Text>
-                                    </Box>
-                                </Box>
-                                <Box flexDirection="row">
-                                    <Box width={24}><Text>{' '}</Text></Box>
-                                    <Box width={BAR_WIDTH + 2} paddingLeft={1}>
-                                        <Text color={profitColor}>{profitBar}</Text>
-                                        <Text dimColor>{profitEmpty}</Text>
-                                    </Box>
-                                </Box>
-                            </Box>
-                        );
-                    })
-                )}
+        return (
+            <Box flexDirection="column" flexGrow={1} paddingLeft={1}>
+                {/* Chart Area */}
+                <Box flexDirection="column">
+                    {rows}
+                </Box>
+                {/* X Axis Line */}
+                <Box flexDirection="row" marginLeft={7}>
+                    <Text dimColor>{'─'.repeat(visibleData.length)}</Text>
+                </Box>
+                {/* X Axis Labels */}
+                <Box flexDirection="row" marginLeft={7}>
+                    {xLabels}
+                </Box>
+                {/* Legend */}
+                <Box marginTop={1} marginLeft={4} flexDirection="row" gap={2}>
+                    <Text color="green">█ 利益 (Profit)</Text>
+                    <Text color="cyan">░ 原価 (Cost)</Text>
+                    <Text dimColor>全高 = 売上 (Sales)</Text>
+                </Box>
             </Box>
         );
     };
