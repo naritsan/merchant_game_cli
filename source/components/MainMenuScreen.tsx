@@ -137,6 +137,9 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
             case 'もちもの':
                 changeScene('inventory');
                 break;
+            case 'ちょうぼ':
+                changeScene('ledger');
+                break;
             case '日付変更':
                 setMode('debug_date');
                 break;

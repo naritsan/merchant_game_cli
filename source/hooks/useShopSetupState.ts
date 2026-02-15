@@ -12,44 +12,60 @@ type UseShopSetupStateProps = {
 export function useShopSetupState({ state: _state, setState, changeScene, advanceTime }: UseShopSetupStateProps) {
     // 商品を陳列に追加
     const addToDisplay = useCallback(
-        (stockIndex: number, price: number) => {
+        (stockIndex: number, price: number, quantity: number) => {
             setState(prev => {
                 const currentStock = [...prev.stock];
                 const stockItem = currentStock[stockIndex];
 
-                if (!stockItem) return prev;
+                if (!stockItem || stockItem.quantity < quantity) return prev;
 
-                // 在庫から1個減らす
-                if (stockItem.quantity > 1) {
+                // 同一商品の別価格チェック
+                const sameItem = prev.sellShop.displayItems.find(d => d.stockItem.itemId === stockItem.itemId);
+                if (sameItem && sameItem.price !== price) {
+                    return {
+                        ...prev,
+                        sellShop: {
+                            ...prev.sellShop,
+                            sellMessage: `エラー: ${getItem(stockItem.itemId).name} は既に ${sameItem.price}G で陳列されています。別の価格では陳列できません。`,
+                        },
+                    };
+                }
+
+                // 在庫から減らす
+                if (stockItem.quantity > quantity) {
                     currentStock[stockIndex] = {
                         ...stockItem,
-                        quantity: stockItem.quantity - 1,
+                        quantity: stockItem.quantity - quantity,
                     };
                 } else {
                     currentStock.splice(stockIndex, 1);
                 }
 
-                // 陳列に追加
-                // DisplayItem の stockItem は、陳列されているその1個（または複数）を表す
-                // 既存の DisplayItem とマージするロジックを入れると親切だが、
-                // ShopSetupScreen での選択とインデックス管理が複雑になるため、
-                // ここでは単純に新規追加とする（後で売却時に困らないようにする）
+                // 陳列に追加・更新
+                const newDisplayItems = [...prev.sellShop.displayItems];
+                const existingIndex = newDisplayItems.findIndex(d => d.stockItem.itemId === stockItem.itemId);
 
-                // ただし、ShopSetupScreen側で「同じ商品を複数回選んだ」場合に
-                // 別枠で表示されると見栄えが悪いかもしれない。
-                // とりあえず単純追加で実装し、表示側でまとめるか、
-                // ここでマージするか。
-                // DisplayItem { stockItem: { quantity: 1, ... } } として追加する。
-
-                const newItem: DisplayItem = {
-                    stockItem: {
-                        itemId: stockItem.itemId,
-                        quantity: 1,
-                        averagePurchasePrice: stockItem.averagePurchasePrice
-                    },
-                    originalCost: stockItem.averagePurchasePrice,
-                    price,
-                };
+                if (existingIndex >= 0) {
+                    const existing = newDisplayItems[existingIndex]!;
+                    newDisplayItems[existingIndex] = {
+                        ...existing,
+                        stockItem: {
+                            ...existing.stockItem,
+                            quantity: existing.stockItem.quantity + quantity
+                        }
+                    };
+                } else {
+                    const newItem: DisplayItem = {
+                        stockItem: {
+                            itemId: stockItem.itemId,
+                            quantity: quantity,
+                            averagePurchasePrice: stockItem.averagePurchasePrice
+                        },
+                        originalCost: stockItem.averagePurchasePrice,
+                        price,
+                    };
+                    newDisplayItems.push(newItem);
+                }
 
                 const itemData = getItem(stockItem.itemId);
 
@@ -58,8 +74,8 @@ export function useShopSetupState({ state: _state, setState, changeScene, advanc
                     stock: currentStock,
                     sellShop: {
                         ...prev.sellShop,
-                        displayItems: [...prev.sellShop.displayItems, newItem],
-                        sellMessage: `${itemData.name} を ${price} G で 陳列しました`,
+                        displayItems: newDisplayItems,
+                        sellMessage: `${itemData.name} を ${quantity}個 ${price}G で陳列しました`,
                     },
                 };
             });

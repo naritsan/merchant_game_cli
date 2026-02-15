@@ -3,6 +3,8 @@ import {
     type GameState,
     type ShopState,
     type ItemId,
+    type StockItem,
+    type StackableItem,
     SHOP_COMMANDS,
     TransactionRecord,
 } from '../types/index.js';
@@ -34,6 +36,16 @@ export function useShopState({ state, setState, changeScene, advanceTime }: UseS
         [setState],
     );
 
+    const changeTab = useCallback(
+        (tab: 'possessions' | 'stock') => {
+            updateShop(() => ({
+                sellTab: tab,
+                selectedItemIndex: 0,
+            }));
+        },
+        [updateShop],
+    );
+
     const moveMenuItem = useCallback(
         (direction: 'up' | 'down') => {
             if (shop.mode === 'menu') {
@@ -55,10 +67,9 @@ export function useShopState({ state, setState, changeScene, advanceTime }: UseS
                     return { selectedItemIndex: next };
                 });
             } else if (shop.mode === 'sell') {
-                // 仕入れショップで「売る」は、所持品（Possessions）を売る操作になる想定
-                // 実装計画では「仕入れ」「自分の店で売る」が主眼だが、ここでの「売る」は卸売り業者への売却（換金）
+                const currentItems = shop.sellTab === 'possessions' ? state.possessions : state.stock;
                 updateShop(prev => {
-                    const len = Math.max(1, state.possessions.length);
+                    const len = Math.max(1, currentItems.length);
                     const next =
                         direction === 'up'
                             ? (prev.selectedItemIndex - 1 + len) % len
@@ -67,36 +78,45 @@ export function useShopState({ state, setState, changeScene, advanceTime }: UseS
                 });
             }
         },
-        [shop.mode, state.possessions.length, updateShop],
+        [shop.mode, shop.sellTab, state.possessions.length, state.stock.length, updateShop],
     );
 
+    const enterBuyQuantityMode = useCallback(() => {
+        const item = SHOP_ITEMS_LIST[shop.selectedItemIndex];
+        if (!item) return;
+
+        updateShop(() => ({
+            mode: 'buy_quantity',
+            shopMessage: `${item.name} を いくつ かいますか？`,
+        }));
+    }, [shop.selectedItemIndex, updateShop]);
+
     const buyItem = useCallback(
-        (itemId: ItemId) => {
+        (itemId: ItemId, quantity: number) => {
             const itemData = getItem(itemId);
-            // 卸値は定価の90% * 運勢補正
-            const purchasePrice = Math.floor(itemData.price * 0.9 * getPurchaseCostMultiplier(state.luck));
+            const unitPrice = Math.floor(itemData.price * 0.9 * getPurchaseCostMultiplier(state.luck));
+            const totalPrice = unitPrice * quantity;
 
             setState(prev => {
-                if (prev.gold < purchasePrice) {
+                if (prev.gold < totalPrice) {
                     return {
                         ...prev,
                         shop: {
                             ...prev.shop,
                             shopMessage: 'おかねが たりないようですね…',
+                            mode: 'buy', // 戻す
                         },
                     };
                 }
 
-                // === 在庫（Stock）への追加ロジック ===
                 const newStock = [...prev.stock];
                 const existingIndex = newStock.findIndex(s => s.itemId === itemId);
 
                 if (existingIndex >= 0) {
-                    // 既存在庫あり：数量追加＆平均取得価格の更新
                     const existingItem = newStock[existingIndex]!;
                     const currentTotalValue = existingItem.averagePurchasePrice * existingItem.quantity;
-                    const newTotalValue = currentTotalValue + purchasePrice; // 今回は1個購入
-                    const newQuantity = existingItem.quantity + 1;
+                    const newTotalValue = currentTotalValue + totalPrice;
+                    const newQuantity = existingItem.quantity + quantity;
                     const newAveragePrice = newTotalValue / newQuantity;
 
                     newStock[existingIndex] = {
@@ -105,34 +125,33 @@ export function useShopState({ state, setState, changeScene, advanceTime }: UseS
                         averagePurchasePrice: newAveragePrice,
                     };
                 } else {
-                    // 新規在庫
                     newStock.push({
                         itemId,
-                        quantity: 1,
-                        averagePurchasePrice: purchasePrice,
+                        quantity,
+                        averagePurchasePrice: unitPrice,
                     });
                 }
 
-                // === 取引履歴の記録 ===
                 const transaction: TransactionRecord = {
                     id: crypto.randomUUID(),
                     date: { day: prev.day, hour: prev.hour, minute: prev.minute },
                     type: 'buy',
                     itemId,
-                    quantity: 1,
-                    price: purchasePrice,
-                    totalPrice: purchasePrice,
+                    quantity,
+                    price: unitPrice,
+                    totalPrice,
                     partner: '卸売業者',
                 };
 
                 return {
                     ...prev,
-                    gold: prev.gold - purchasePrice,
+                    gold: prev.gold - totalPrice,
                     stock: newStock,
                     transactions: [...prev.transactions, transaction],
                     shop: {
                         ...prev.shop,
-                        shopMessage: `${itemData.name} を ${purchasePrice} G で かいました！`,
+                        mode: 'buy',
+                        shopMessage: `${itemData.name} を ${quantity}個 ${totalPrice} G で かいました！`,
                     },
                 };
             });
@@ -142,10 +161,11 @@ export function useShopState({ state, setState, changeScene, advanceTime }: UseS
 
     const sellItem = useCallback(
         (index: number) => {
-            // 卸売業者に「売る」（所持品を処分）する場合
             setState(prev => {
-                const possessionItem = prev.possessions[index];
-                if (!possessionItem) {
+                const isStock = prev.shop.sellTab === 'stock';
+                const itemToSell = isStock ? prev.stock[index] : prev.possessions[index];
+
+                if (!itemToSell) {
                     return {
                         ...prev,
                         shop: {
@@ -155,39 +175,53 @@ export function useShopState({ state, setState, changeScene, advanceTime }: UseS
                     };
                 }
 
-                const itemData = getItem(possessionItem.itemId);
-                const sellPrice = Math.floor(itemData.price / 2); // 買値の半額（従来のロジック踏襲）
+                const itemData = getItem(itemToSell.itemId);
+                const sellPrice = Math.floor(itemData.price / 2);
 
-                const newPossessions = [...prev.possessions];
-                if (possessionItem.quantity > 1) {
-                    newPossessions[index] = { ...possessionItem, quantity: possessionItem.quantity - 1 };
+                let nextPossessions = [...prev.possessions];
+                let nextStock = [...prev.stock];
+
+                if (isStock) {
+                    const stockItem = itemToSell as StockItem;
+                    if (stockItem.quantity > 1) {
+                        nextStock[index] = { ...stockItem, quantity: stockItem.quantity - 1 };
+                    } else {
+                        nextStock.splice(index, 1);
+                    }
                 } else {
-                    newPossessions.splice(index, 1);
+                    const possessionItem = itemToSell as StackableItem;
+                    if (possessionItem.quantity > 1) {
+                        nextPossessions[index] = { ...possessionItem, quantity: possessionItem.quantity - 1 };
+                    } else {
+                        nextPossessions.splice(index, 1);
+                    }
                 }
 
-                // === 取引履歴の記録 ===
                 const transaction: TransactionRecord = {
                     id: crypto.randomUUID(),
                     date: { day: prev.day, hour: prev.hour, minute: prev.minute },
                     type: 'sell',
-                    itemId: possessionItem.itemId,
+                    itemId: itemToSell.itemId,
                     quantity: 1,
                     price: sellPrice,
                     totalPrice: sellPrice,
                     partner: '卸売業者',
                 };
 
+                const currentListLen = isStock ? nextStock.length : nextPossessions.length;
+
                 return {
                     ...prev,
                     gold: prev.gold + sellPrice,
-                    possessions: newPossessions,
+                    possessions: nextPossessions,
+                    stock: nextStock,
                     transactions: [...prev.transactions, transaction],
                     shop: {
                         ...prev.shop,
                         shopMessage: `${itemData.name} を ${sellPrice} G で うりました！`,
                         selectedItemIndex: Math.min(
                             prev.shop.selectedItemIndex,
-                            Math.max(0, newPossessions.length - 1),
+                            Math.max(0, currentListLen - 1),
                         ),
                     },
                 };
@@ -238,14 +272,11 @@ export function useShopState({ state, setState, changeScene, advanceTime }: UseS
 
     const selectItem = useCallback(() => {
         if (shop.mode === 'buy') {
-            const item = SHOP_ITEMS_LIST[shop.selectedItemIndex];
-            if (item) {
-                buyItem(item.id);
-            }
+            enterBuyQuantityMode();
         } else if (shop.mode === 'sell') {
             sellItem(shop.selectedItemIndex);
         }
-    }, [shop.mode, shop.selectedItemIndex, buyItem, sellItem]);
+    }, [shop.mode, shop.selectedItemIndex, enterBuyQuantityMode, sellItem]);
 
     const goBackToMenu = useCallback(() => {
         updateShop(() => ({
@@ -259,5 +290,5 @@ export function useShopState({ state, setState, changeScene, advanceTime }: UseS
         changeScene('menu');
     }, [advanceTime, changeScene]);
 
-    return { moveMenuItem, selectMenuItem, selectItem, goBackToMenu, exitShop };
+    return { moveMenuItem, selectMenuItem, selectItem, goBackToMenu, exitShop, changeTab, buyItem, enterBuyQuantityMode };
 }

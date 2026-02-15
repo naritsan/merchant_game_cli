@@ -45,6 +45,7 @@ const initialState: GameState = {
         selectedMenuItem: 0,
         selectedItemIndex: 0,
         mode: 'menu',
+        sellTab: 'possessions',
     },
     sellShop: {
         displayItems: [],

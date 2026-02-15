@@ -165,13 +165,14 @@ export const MENU_COMMANDS: MenuCommand[] = [
 
 // === ショップ画面の状態 ===
 
-export type ShopMode = 'menu' | 'buy' | 'sell';
+export type ShopMode = 'menu' | 'buy' | 'sell' | 'buy_quantity';
 
 export type ShopState = {
 	shopMessage: string;
 	selectedMenuItem: number;
 	selectedItemIndex: number;
 	mode: ShopMode;
+	sellTab: 'possessions' | 'stock';
 };
 
 // === ゲーム全体の状態 ===

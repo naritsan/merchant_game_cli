@@ -17,7 +17,9 @@ export default function ShopSetupScreen({ state, setState, changeScene, advanceT
     const [selectedStockIndex, setSelectedStockIndex] = useState(0);
     // 価格設定（加速ロジック付き）
     const { value: price, setValue: setPrice, change: changePrice } = useAcceleratedValue(100, 0, 999999);
-    const [mode, setMode] = useState<'select' | 'price'>('select');
+    // 数量設定
+    const { value: quantity, setValue: setQuantity, change: changeQuantity } = useAcceleratedValue(1, 1, 99);
+    const [mode, setMode] = useState<'select' | 'price' | 'quantity'>('select');
 
     const { addToDisplay, openShop } = useShopSetupState({
         state,
@@ -49,26 +51,42 @@ export default function ShopSetupScreen({ state, setState, changeScene, advanceT
                 changeScene('menu');
             }
         } else if (mode === 'price') {
-            if (key.upArrow) {
-                changePrice(1);
-            } else if (key.downArrow) {
-                changePrice(-1);
-            } else if (key.leftArrow) {
-                changePrice(-100);
-            } else if (key.rightArrow) {
-                changePrice(100);
-            } else if (key.return) {
-                addToDisplay(selectedStockIndex, price);
-                setMode('select');
-                // リストが減るのでインデックスを調整
-                setSelectedStockIndex(prev => Math.max(0, prev - 1));
+            if (key.upArrow) changePrice(1);
+            if (key.downArrow) changePrice(-1);
+            if (key.leftArrow) changePrice(-100);
+            if (key.rightArrow) changePrice(100);
+            if (key.return) {
+                const item = stockList[selectedStockIndex];
+                if (item) {
+                    setQuantity(item.quantity); // デフォルトで全数
+                    setMode('quantity');
+                }
             } else if (key.escape) {
                 setMode('select');
+            }
+        } else if (mode === 'quantity') {
+            const item = stockList[selectedStockIndex]!;
+            if (key.upArrow) changeQuantity(1);
+            if (key.downArrow) changeQuantity(-1);
+            if (key.leftArrow) changeQuantity(-10);
+            if (key.rightArrow) changeQuantity(10);
+
+            // 範囲制限は useAcceleratedValue でやっているが、
+            // 在庫数を超えないように再調整が必要ならここでする
+            if (quantity > item.quantity) setQuantity(item.quantity);
+
+            if (key.return) {
+                addToDisplay(selectedStockIndex, price, quantity);
+                setMode('select');
+                // リストが減る可能性があるのでインデックスを調整
+                setSelectedStockIndex(prev => Math.min(prev, Math.max(0, state.stock.length - 1)));
+            } else if (key.escape) {
+                setMode('price');
             }
         }
 
         if (_input === 'p' || _input === 'P') {
-            if (state.sellShop.displayItems.length > 0) {
+            if (state.sellShop.displayItems.length > 0 && mode === 'select') {
                 openShop();
             }
         }
@@ -125,23 +143,28 @@ export default function ShopSetupScreen({ state, setState, changeScene, advanceT
                 </Box>
             </BorderBox>
 
-            {mode === 'price' && selectedItem && (
+            {(mode === 'price' || mode === 'quantity') && selectedItem && (
                 <BorderBox>
                     <Box flexDirection="column">
-                        <Text bold>価格設定</Text>
+                        <Text bold>{mode === 'price' ? '価格設定' : '数量設定'}</Text>
                         <Text>
-                            {getItem(selectedItem.itemId).name}
+                            アイテム: <Text color="cyan">{getItem(selectedItem.itemId).name}</Text>
                         </Text>
-                        <Text>
-                            値札: <Text color="yellow">{price} G</Text>
-                        </Text>
+                        <Box flexDirection="row">
+                            <Text>値札: <Text color={mode === 'price' ? 'yellow' : 'white'} bold={mode === 'price'}>{price} G</Text></Text>
+                            <Text>  |  </Text>
+                            <Text>数量: <Text color={mode === 'quantity' ? 'yellow' : 'white'} bold={mode === 'quantity'}>{quantity} 個</Text></Text>
+                        </Box>
+                        {mode === 'quantity' && (
+                            <Text dimColor>(在庫: {selectedItem.quantity}個)</Text>
+                        )}
                     </Box>
                 </BorderBox>
             )}
 
             <BorderBox>
                 <Box flexDirection="column">
-                    <Text bold>陳列中 ({state.sellShop.displayItems.length}個)</Text>
+                    <Text bold>陳列中 ({state.sellShop.displayItems.length}種類)</Text>
                     <Text> </Text>
                     {state.sellShop.displayItems.length === 0 ? (
                         <Text dimColor>まだ商品がありません</Text>
@@ -151,7 +174,7 @@ export default function ShopSetupScreen({ state, setState, changeScene, advanceT
                             const itemData = getItem(displayItem.stockItem.itemId);
                             return (
                                 <Text key={index}>
-                                    {itemData.name} {displayItem.price}G
+                                    {itemData.name} x{displayItem.stockItem.quantity} - {displayItem.price}G
                                 </Text>
                             );
                         })
@@ -173,8 +196,10 @@ export default function ShopSetupScreen({ state, setState, changeScene, advanceT
                 ) : null}
                 <Text dimColor>
                     {mode === 'select'
-                        ? '↑↓: 選択 Enter: 価格設定 Esc: もどる'
-                        : '↑↓: 増減(長押し加速) ←→: ±100 Enter: 陳列 Esc: キャンセル'}
+                        ? '↑↓: 選択 Enter: 設定 Esc: もどる'
+                        : mode === 'price'
+                            ? '↑↓: 価格変更 ←→:±100 Enter:次へ Esc:戻る'
+                            : '↑↓: 数量変更 ←→:±10  Enter:確定  Esc:戻る'}
                 </Text>
             </Box>
         </Box>
