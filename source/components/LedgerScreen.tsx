@@ -285,28 +285,24 @@ export default function LedgerScreen({ state, changeScene }: Props) {
         const maxProfitDay = [...dailyAnalysis].sort((a, b) => b.profit - a.profit)[0];
 
         return (
-            <Box flexDirection="column" flexGrow={1} paddingX={2} paddingTop={1}>
-                <Box flexDirection="row" justifyContent="space-between" marginBottom={1}>
+            <Box flexDirection="column" flexGrow={1} paddingX={2} paddingTop={0}>
+                <Box flexDirection="row" justifyContent="space-between" marginBottom={0}>
                     <Box flexDirection="column" width="48%">
-                        <Box borderStyle="single" borderColor="blue" flexDirection="column" paddingX={1}>
-                            <Text bold color="blue">全期間実績</Text>
-                            <Box justifyContent="space-between"><Text>総売上:</Text><Text>{totalSales} G</Text></Box>
-                            <Box justifyContent="space-between"><Text>総利益:</Text><Text>{totalProfit} G</Text></Box>
-                            <Box justifyContent="space-between"><Text>粗利率:</Text><Text>{totalMargin.toFixed(1)} %</Text></Box>
-                        </Box>
+                        <Text bold color="blue" underline>全期間実績</Text>
+                        <Box justifyContent="space-between"><Text>総売上:</Text><Text>{totalSales} G</Text></Box>
+                        <Box justifyContent="space-between"><Text>総利益:</Text><Text>{totalProfit} G</Text></Box>
+                        <Box justifyContent="space-between"><Text>粗利率:</Text><Text>{totalMargin.toFixed(1)} %</Text></Box>
                     </Box>
                     <Box flexDirection="column" width="48%">
-                        <Box borderStyle="single" borderColor="cyan" flexDirection="column" paddingX={1}>
-                            <Text bold color="cyan">直近7日間</Text>
-                            <Box justifyContent="space-between"><Text>売上:</Text><Text>{last7Sales} G</Text></Box>
-                            <Box justifyContent="space-between"><Text>利益:</Text><Text>{last7Profit} G</Text></Box>
-                            <Box justifyContent="space-between"><Text>粗利率:</Text><Text>{last7Margin.toFixed(1)} %</Text></Box>
-                        </Box>
+                        <Text bold color="cyan" underline>直近7日間</Text>
+                        <Box justifyContent="space-between"><Text>売上:</Text><Text>{last7Sales} G</Text></Box>
+                        <Box justifyContent="space-between"><Text>利益:</Text><Text>{last7Profit} G</Text></Box>
+                        <Box justifyContent="space-between"><Text>粗利率:</Text><Text>{last7Margin.toFixed(1)} %</Text></Box>
                     </Box>
                 </Box>
 
-                <Box borderStyle="single" borderColor="magenta" flexDirection="column" paddingX={1} marginBottom={0}>
-                    <Text bold color="magenta">その他指標</Text>
+                <Box flexDirection="column" marginTop={1}>
+                    <Text bold color="magenta" underline>その他指標</Text>
                     <Box justifyContent="space-between">
                         <Text>客単価 (平均):</Text>
                         <Text bold>{avgCustomerSpend} G</Text>
@@ -319,9 +315,6 @@ export default function LedgerScreen({ state, changeScene }: Props) {
                         <Text>最高利益:</Text>
                         <Text>{maxProfitDay ? `${maxProfitDay.day}日目 (${maxProfitDay.profit} G)` : '-'}</Text>
                     </Box>
-                </Box>
-                <Box marginTop={0} justifyContent="flex-end">
-                    <Text dimColor>(Esc: 戻る)</Text>
                 </Box>
             </Box>
         );
@@ -339,7 +332,7 @@ export default function LedgerScreen({ state, changeScene }: Props) {
             {renderTabs()}
 
             {/* Main Content Area */}
-            <BorderBox height={14} flexDirection="column">
+            <BorderBox height={16} flexDirection="column">
                 {activeTab === 'history' && renderHistory()}
                 {activeTab === 'analysis' && renderAnalysis()}
                 {activeTab === 'dashboard' && (
@@ -348,7 +341,7 @@ export default function LedgerScreen({ state, changeScene }: Props) {
                 )}
             </BorderBox>
 
-            <Box justifyContent="center" marginTop={1}>
+            <Box justifyContent="center" marginTop={0}>
                 {activeTab === 'analysis' && <Text dimColor>※収支 = 総売上 - 総仕入 (在庫分含む)</Text>}
                 {activeTab !== 'dashboard' && <Text dimColor>←→: タブ切替  ↑↓: スクロール  Esc: 戻る</Text>}
                 {activeTab === 'dashboard' && dashboardMode === 'menu' && <Text dimColor>←→: タブ切替  Enter: 決定  Esc: 戻る</Text>}
