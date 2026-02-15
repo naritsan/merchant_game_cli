@@ -120,7 +120,6 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                                     <Text bold>{customer.name}</Text>
                                     <Text> </Text>
                                     <Text>希望: {customer.wantItem.name}</Text>
-                                    <Text bold color="yellow">{customer.targetPrice} G</Text>
                                     {state.showCustomerBudget && (
                                         <Text dimColor>(予算: {customer.maxBudget} G)</Text>
                                     )}
