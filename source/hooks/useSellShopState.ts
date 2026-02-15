@@ -156,7 +156,7 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
         // 値札が高すぎて予算オーバーの場合
         if (customer.targetPrice > customer.maxBudget) {
             updateSellShop(() => ({
-                sellMessage: `${customer.name}「${customer.targetPrice}G か…\n  もうすこし 安ければ 買えるのだが…」\n（ねびき で 交渉できます）`
+                sellMessage: `「${customer.targetPrice} G か…\n  もうすこし 安ければ 買えるのだが…」\n（ねびき で 交渉できます）`
             }));
             return;
         }
@@ -177,7 +177,7 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
         if (newPrice <= customer.maxBudget) {
             executeSale(newPrice, customer.wantItem.name);
             updateSellShop(() => ({
-                sellMessage: `${customer.name}「ありがとう！ それなら 買います！」\n（${newPrice} G で うれました）`
+                sellMessage: `「ありがとう！ それなら 買います！」\n（${newPrice} G で うれました）`
             }));
             return;
         }
@@ -192,7 +192,7 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
                 };
                 return {
                     customer: updatedCustomer,
-                    sellMessage: `${customer.name}「${newPrice} G か… まだ すこし 高いな…」`
+                    sellMessage: `「${newPrice} G か… まだ すこし 高いな…」`
                 };
             });
             return;
@@ -201,7 +201,7 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
         // 交渉決裂
         updateSellShop(() => ({
             customer: null,
-            sellMessage: `${customer.name}「${newPrice} G か… えんが なかったようだな」\n（客は かえっていった…）`,
+            sellMessage: `「${newPrice} G か… えんが なかったようだな」\n（客は かえっていった…）`,
             isWaiting: true
         }));
         advanceTime(30);
@@ -209,10 +209,9 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
 
     // 断る
     const refuse = useCallback(() => {
-        updateSellShop(prev => {
-            const customerName = prev.customer?.name ?? 'きゃく';
+        updateSellShop(_prev => {
             return {
-                sellMessage: `${customerName} は ざんねんそうに かえっていった…`,
+                sellMessage: 'ざんねんそうに かえっていった…',
                 customer: null,
                 isWaiting: true,
             };
