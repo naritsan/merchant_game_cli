@@ -129,7 +129,7 @@ export default function ShopSetupScreen({ state, setState, changeScene, advanceT
                                 const itemData = getItem(stockItem.itemId);
                                 return (
                                     <Text key={index} color={isSelected ? 'yellow' : undefined}>
-                                        {isSelected ? '▶' : ' '} {itemData.name} x{stockItem.quantity} (Avg: {Math.round(stockItem.averagePurchasePrice)}G)
+                                        {isSelected ? '▶' : ' '} {itemData.name} x{stockItem.quantity} (定価:{itemData.price}G / 平均:{Math.round(stockItem.averagePurchasePrice)}G)
                                     </Text>
                                 );
                             })}
