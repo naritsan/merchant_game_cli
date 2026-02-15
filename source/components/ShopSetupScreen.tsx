@@ -38,7 +38,7 @@ export default function ShopSetupScreen({ state, setState, changeScene, advanceT
             } else if (key.return && state.inventory.length > 0) {
                 const item = state.inventory[selectedInventoryIndex];
                 if (item) {
-                    setPrice(Math.floor(item.item.price * 1.5));
+                    setPrice(item.item.price);
                     setMode('price');
                 }
             } else if (key.escape) {

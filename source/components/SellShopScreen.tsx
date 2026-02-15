@@ -187,10 +187,21 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                             <Text dimColor>↑↓: 増減(長押しで加速)  Enter: 決定</Text>
                         </Box>
                     ) : (
-                        <CommandMenu
-                            items={SELL_SHOP_COMMANDS as unknown as string[]}
-                            selectedIndex={sellShop.selectedCommand}
-                        />
+                        (() => {
+                            const { customer } = sellShop;
+                            const filteredCommands = SELL_SHOP_COMMANDS.filter(cmd => {
+                                if (cmd === 'うる' && customer && customer.targetPrice > customer.maxBudget) {
+                                    return false;
+                                }
+                                return true;
+                            });
+                            return (
+                                <CommandMenu
+                                    items={filteredCommands as unknown as string[]}
+                                    selectedIndex={sellShop.selectedCommand}
+                                />
+                            );
+                        })()
                     )}
                 </BorderBox>
                 <BorderBox width={30}>
