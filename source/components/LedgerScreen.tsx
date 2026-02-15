@@ -20,22 +20,35 @@ export default function LedgerScreen({ state, changeScene }: Props) {
     const [dashboardMode, setDashboardMode] = useState<DashboardMode>('menu');
     const [dashboardMenuIndex, setDashboardMenuIndex] = useState(0);
 
+    // Analysis specific state
+    const [analysisIndex, setAnalysisIndex] = useState(0);
+    const [showAnalysisDetail, setShowAnalysisDetail] = useState(false);
+
     // Data aggregation
     const reversedTransactions = useMemo(() => [...state.transactions].reverse(), [state.transactions]);
-    const itemAnalysis = useMemo(() => aggregateByItem(state.transactions), [state.transactions]);
+
+    const itemAnalysis = useMemo(() => {
+        const raw = aggregateByItem(state.transactions);
+        return raw.map(a => {
+            const profit = a.totalSales - a.totalCost;
+            const margin = a.totalSales > 0 ? (profit / a.totalSales) * 100 : 0;
+            return { ...a, profit, margin };
+        }).sort((a, b) => b.margin - a.margin);
+    }, [state.transactions]);
+
     const dailyAnalysis = useMemo(() => aggregateByDay(state.transactions, state.day), [state.transactions, state.day]);
 
     const VISIBLE_ROWS = 10;
 
     useInput((_input, key) => {
         // Global Navigation
-        if (key.rightArrow && (activeTab !== 'dashboard' || dashboardMode === 'menu')) {
+        if (!showAnalysisDetail && key.rightArrow && (activeTab !== 'dashboard' || dashboardMode === 'menu')) {
             if (activeTab === 'history') setActiveTab('analysis');
             else if (activeTab === 'analysis') setActiveTab('dashboard');
             setScrollIndex(0);
             return;
         }
-        if (key.leftArrow && (activeTab !== 'dashboard' || dashboardMode === 'menu')) {
+        if (!showAnalysisDetail && key.leftArrow && (activeTab !== 'dashboard' || dashboardMode === 'menu')) {
             if (activeTab === 'analysis') setActiveTab('history');
             else if (activeTab === 'dashboard') setActiveTab('analysis');
             setScrollIndex(0);
@@ -43,7 +56,9 @@ export default function LedgerScreen({ state, changeScene }: Props) {
         }
 
         if (key.escape || (key.ctrl && _input === 'c')) {
-            if (activeTab === 'dashboard' && dashboardMode !== 'menu') {
+            if (showAnalysisDetail) {
+                setShowAnalysisDetail(false);
+            } else if (activeTab === 'dashboard' && dashboardMode !== 'menu') {
                 setDashboardMode('menu');
             } else {
                 changeScene('menu');
@@ -65,18 +80,32 @@ export default function LedgerScreen({ state, changeScene }: Props) {
                 if (key.downArrow) setScrollIndex(prev => Math.max(0, prev + 1)); // Scroll forward
             }
             // Metrics mode has no scroll currently
+        } else if (activeTab === 'analysis') {
+            if (showAnalysisDetail) return;
+
+            if (key.upArrow) {
+                setAnalysisIndex(prev => Math.max(0, prev - 1));
+            } else if (key.downArrow) {
+                setAnalysisIndex(prev => Math.min(itemAnalysis.length - 1, prev + 1));
+            } else if (key.return) {
+                if (itemAnalysis.length > 0) setShowAnalysisDetail(true);
+            }
         } else {
-            // History & Analysis Scrolling
+            // History Scrolling
             if (key.upArrow) {
                 setScrollIndex(prev => Math.max(0, prev - 1));
             } else if (key.downArrow) {
-                const maxRows =
-                    activeTab === 'history' ? reversedTransactions.length :
-                        activeTab === 'analysis' ? itemAnalysis.length : 0;
-                setScrollIndex(prev => Math.min(Math.max(0, maxRows - VISIBLE_ROWS), prev + 1));
+                setScrollIndex(prev => Math.min(Math.max(0, reversedTransactions.length - VISIBLE_ROWS), prev + 1));
             }
         }
     });
+
+    // Auto-scroll logic for Analysis cursor
+    const analysisScroll = Math.max(0, analysisIndex - VISIBLE_ROWS + 1);
+    const analysisVisible = useMemo(() => {
+        const start = Math.min(analysisScroll, Math.max(0, itemAnalysis.length - VISIBLE_ROWS));
+        return itemAnalysis.slice(start, start + VISIBLE_ROWS);
+    }, [itemAnalysis, analysisScroll]);
 
     const renderTabs = () => (
         <Box flexDirection="row" justifyContent="space-around" borderStyle="single" borderBottom={false} borderLeft={false} borderRight={false} borderTop={false} marginBottom={0}>
@@ -129,31 +158,58 @@ export default function LedgerScreen({ state, changeScene }: Props) {
         );
     };
 
+    const renderAnalysisDetail = () => {
+        const item = itemAnalysis[analysisIndex];
+        if (!item) return null;
+
+        return (
+            <Box flexDirection="column" paddingX={2} paddingY={1} flexGrow={1}>
+                <Box borderStyle="round" borderColor="cyan" flexDirection="column" paddingX={2}>
+                    <Text bold color="cyan">{item.itemName} の詳細</Text>
+                    <Box marginTop={1} flexDirection="column">
+                        <Box justifyContent="space-between"><Text>販売数:</Text><Text bold>{item.salesCount} 個</Text></Box>
+                        <Box justifyContent="space-between"><Text>仕入総数:</Text><Text>{item.purchaseCount} 個</Text></Box>
+                        <Box justifyContent="space-between"><Text>売上総額:</Text><Text color="yellow">{item.totalSales} G</Text></Box>
+                        <Box justifyContent="space-between"><Text>売上原価:</Text><Text color="red">{item.totalCost} G</Text></Box>
+                        <Box justifyContent="space-between"><Text>総利益:</Text><Text color="green">{item.profit} G</Text></Box>
+                        <Box justifyContent="space-between"><Text>平均仕入単価:</Text><Text>{item.purchaseCount > 0 ? item.averagePurchasePrice : '-'} G</Text></Box>
+                        <Box justifyContent="space-between"><Text>売値平均:</Text><Text>{item.salesCount > 0 ? item.averageSellPrice : '-'} G</Text></Box>
+                        <Box justifyContent="space-between"><Text>平均利益率:</Text><Text bold color="green">{item.margin.toFixed(1)} %</Text></Box>
+                    </Box>
+                </Box>
+                <Box marginTop={1} justifyContent="center">
+                    <Text dimColor>Esc: リストに戻る</Text>
+                </Box>
+            </Box>
+        );
+    };
+
     const renderAnalysis = () => {
-        const visibleData = itemAnalysis.slice(scrollIndex, scrollIndex + VISIBLE_ROWS);
+        if (showAnalysisDetail) return renderAnalysisDetail();
+
         return (
             <Box flexDirection="column" flexGrow={1}>
                 <Box borderStyle="single" borderTop={false} borderLeft={false} borderRight={false} borderColor="gray">
                     <Box width={16}><Text dimColor>品名</Text></Box>
-                    <Box width={6} justifyContent="flex-end"><Text dimColor>販売数</Text></Box>
-                    <Box width={10} justifyContent="flex-end"><Text dimColor>仕入平均</Text></Box>
+                    <Box width={12} justifyContent="flex-end"><Text dimColor>売上総額</Text></Box>
                     <Box width={10} justifyContent="flex-end"><Text dimColor>売値平均</Text></Box>
-                    <Box width={10} justifyContent="flex-end"><Text dimColor>利益</Text></Box>
+                    <Box width={14} justifyContent="flex-end"><Text dimColor>平均利益率</Text></Box>
                 </Box>
-                {visibleData.length === 0 ? (
+                {itemAnalysis.length === 0 ? (
                     <Box flexGrow={1} alignItems="center" justifyContent="center"><Text dimColor>データなし</Text></Box>
                 ) : (
-                    visibleData.map((a) => {
-                        const profit = a.totalSales - a.totalCost;
-                        const profitColor = profit > 0 ? 'green' : profit < 0 ? 'red' : 'white';
+                    analysisVisible.map((a) => {
+                        const globalIdx = itemAnalysis.indexOf(a);
+                        const isSelected = globalIdx === analysisIndex;
+                        const marginColor = a.margin >= 20 ? 'green' : a.margin > 0 ? 'white' : 'red';
+                        const textColor = isSelected ? 'yellow' : undefined;
 
                         return (
                             <Box key={a.itemId}>
-                                <Box width={16}><Text wrap="truncate-end">{a.itemName}</Text></Box>
-                                <Box width={6} justifyContent="flex-end"><Text>{a.salesCount}</Text></Box>
-                                <Box width={10} justifyContent="flex-end"><Text>{a.purchaseCount > 0 ? a.averagePurchasePrice : '-'}G</Text></Box>
-                                <Box width={10} justifyContent="flex-end"><Text>{a.salesCount > 0 ? a.averageSellPrice : '-'}G</Text></Box>
-                                <Box width={10} justifyContent="flex-end"><Text color={profitColor}>{profit}G</Text></Box>
+                                <Box width={16}><Text color={textColor} bold={isSelected} wrap="truncate-end">{isSelected ? '▶' : '  '}{a.itemName}</Text></Box>
+                                <Box width={12} justifyContent="flex-end"><Text color={textColor} bold={isSelected}>{a.totalSales} G</Text></Box>
+                                <Box width={10} justifyContent="flex-end"><Text color={textColor} bold={isSelected}>{a.salesCount > 0 ? a.averageSellPrice : '-'} G</Text></Box>
+                                <Box width={14} justifyContent="flex-end"><Text color={isSelected ? 'yellow' : marginColor} bold={isSelected}>{a.margin.toFixed(1)} %</Text></Box>
                             </Box>
                         );
                     })
@@ -342,8 +398,9 @@ export default function LedgerScreen({ state, changeScene }: Props) {
             </BorderBox>
 
             <Box justifyContent="center" marginTop={0}>
-                {activeTab === 'analysis' && <Text dimColor>※収支 = 総売上 - 総仕入 (在庫分含む)</Text>}
-                {activeTab !== 'dashboard' && <Text dimColor>←→: タブ切替  ↑↓: スクロール  Esc: 戻る</Text>}
+                {activeTab === 'analysis' && !showAnalysisDetail && <Text dimColor>↑↓: 選択  Enter: 詳細  Esc: 戻る</Text>}
+                {activeTab === 'analysis' && showAnalysisDetail && <Text dimColor>Esc: リストに戻る</Text>}
+                {activeTab === 'history' && <Text dimColor>↑↓: スクロール  Esc: 戻る</Text>}
                 {activeTab === 'dashboard' && dashboardMode === 'menu' && <Text dimColor>←→: タブ切替  Enter: 決定  Esc: 戻る</Text>}
                 {activeTab === 'dashboard' && dashboardMode !== 'menu' && <Text dimColor>Esc: メニューへ戻る</Text>}
             </Box>
