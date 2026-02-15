@@ -137,77 +137,85 @@ export default function LedgerScreen({ state, changeScene }: Props) {
     };
 
     const renderDashboard = () => {
-        // Line Chart Implementation
-        const height = 10;
-        const width = 50;
+        const visibleData = dailyAnalysis.slice(scrollIndex, scrollIndex + VISIBLE_ROWS);
 
-        // Get data for the last 'width' days or all available data if less
-        // For simplicity in this text-based chart, let's show the last N days that fit
-        // But since we have scrollIndex, maybe we stick to the scrolling list? 
-        // No, the user wants a chart "Dashboard". A fixed chart is better than a scrolling list for a "Dashboard" feel.
-        // Let's use the visible data logic but map it to a chart.
+        // Helper to get a "nice" round number for the scale
+        const getNiceMax = (num: number) => {
+            if (num <= 0) return 100;
+            const digits = Math.floor(Math.log10(num));
+            const base = Math.pow(10, digits);
+            const lead = num / base; // e.g. 800 -> 8, 1200 -> 1.2
 
-        // Actually, looking at the previous implementation, it was a list of days with bars.
-        // The user wants "Line Chart".
-        // Let's try to fit as many days as possible in the width.
-        const visibleData = dailyAnalysis.slice(Math.max(0, dailyAnalysis.length - width), dailyAnalysis.length);
+            // Round up to nearest nice factor
+            let shadow;
+            if (lead <= 1) shadow = 1;
+            else if (lead <= 2) shadow = 2;
+            else if (lead <= 5) shadow = 5;
+            else shadow = 10;
 
-        if (visibleData.length === 0) {
-            return <Box flexGrow={1} alignItems="center" justifyContent="center"><Text dimColor>データなし</Text></Box>;
-        }
+            return shadow * base;
+        };
 
-        const maxVal = Math.max(1, ...visibleData.map(d => Math.max(d.totalSales, d.profit)));
-        const minVal = Math.min(0, ...visibleData.map(d => Math.min(d.totalSales, d.profit))); // Allow negative profit
-        const range = maxVal - minVal;
-
-        // Generate the grid
-        const rows: React.ReactNode[] = [];
-
-        // Y-axis labels and chart rows
-        for (let i = height - 1; i >= 0; i--) {
-            const yVal = minVal + (range * (i / (height - 1)));
-            const yLabel = Math.floor(yVal).toString().padStart(6, ' ');
-
-            const rowChars = visibleData.map(d => {
-                // Normalize data to 0..(height-1)
-                const salesY = Math.floor(((d.totalSales - minVal) / range) * (height - 1));
-                const profitY = Math.floor(((d.profit - minVal) / range) * (height - 1));
-
-                if (i === salesY && i === profitY) return <Text key={d.day} color="yellow">X</Text>; // Overlap
-                if (i === salesY) return <Text key={d.day} color="cyan">S</Text>;
-                if (i === profitY) return <Text key={d.day} color="green">P</Text>;
-                if (Math.abs(yVal - 0) < range / height / 2) return <Text key={d.day} dimColor>-</Text>; // Zero line
-                return <Text key={d.day} dimColor>·</Text>;
-            });
-
-            rows.push(
-                <Box key={i} flexDirection="row">
-                    <Text dimColor>{yLabel} | </Text>
-                    {rowChars}
-                </Box>
-            );
-        }
-
-        // X-axis labels (Days) - simplified, show every 5th day or so if crowded
-        // For now, just last digit of day? or just specific ticks?
-        // Let's try to show day number vertically or just every few days.
-        const xLabels = (
-            <Box flexDirection="row" marginLeft={9}>
-                {visibleData.map((d, i) => (
-                    <Text key={d.day} dimColor>{d.day % 5 === 0 || i === 0 || i === visibleData.length - 1 ? d.day.toString().padEnd(1, ' ').slice(-1) : ' '}</Text>
-                ))}
-            </Box>
-        );
+        const rawMax = Math.max(1, ...visibleData.map(d => Math.max(d.totalSales, Math.abs(d.profit))));
+        const maxVal = getNiceMax(rawMax);
+        const BAR_WIDTH = 30;
 
         return (
-            <Box flexDirection="column" flexGrow={1} paddingLeft={1}>
-                {rows}
-                <Box borderStyle="single" borderTop={true} borderLeft={false} borderRight={false} borderBottom={false} borderColor="gray" marginLeft={8} width={visibleData.length + 2} />
-                {xLabels}
-                <Box marginTop={1} flexDirection="row" gap={2}>
-                    <Text color="cyan">S: 売上</Text>
-                    <Text color="green">P: 利益</Text>
+            <Box flexDirection="column" flexGrow={1}>
+                {/* Header with Scale Info */}
+                <Box borderStyle="single" borderTop={false} borderLeft={false} borderRight={false} borderColor="gray">
+                    <Box width={6}><Text dimColor>Day</Text></Box>
+                    <Box width={9} justifyContent="flex-end"><Text dimColor>売上</Text></Box>
+                    <Box width={9} justifyContent="flex-end"><Text dimColor>利益</Text></Box>
+                    <Box width={BAR_WIDTH + 2} paddingLeft={1}>
+                        <Text dimColor>Gauge (Scale: 0 ~ {maxVal})</Text>
+                    </Box>
                 </Box>
+
+                {visibleData.length === 0 ? (
+                    <Box flexGrow={1} alignItems="center" justifyContent="center"><Text dimColor>データなし</Text></Box>
+                ) : (
+                    visibleData.map((d) => {
+                        const salesRatio = Math.min(1, Math.max(0, d.totalSales / maxVal));
+                        const profitRatio = Math.min(1, Math.max(0, Math.abs(d.profit) / maxVal));
+
+                        const salesLen = Math.floor(salesRatio * BAR_WIDTH);
+                        const profitLen = Math.floor(profitRatio * BAR_WIDTH);
+
+                        const profitColor = d.profit >= 0 ? 'green' : 'red';
+
+                        // Create gauge strings
+                        // Sales Gauge
+                        const salesBar = '█'.repeat(salesLen);
+                        const salesEmpty = '·'.repeat(BAR_WIDTH - salesLen);
+
+                        // Profit Gauge
+                        const profitBar = '█'.repeat(profitLen);
+                        const profitEmpty = '·'.repeat(BAR_WIDTH - profitLen);
+
+                        return (
+                            <Box key={d.day} flexDirection="column" marginBottom={0} borderStyle="single" borderBottom={false} borderLeft={false} borderRight={false} borderTop={false} borderColor="gray">
+                                <Box flexDirection="row">
+                                    <Box width={6}><Text>{d.day}日</Text></Box>
+                                    <Box width={9} justifyContent="flex-end"><Text>{d.totalSales}G</Text></Box>
+                                    <Box width={9} justifyContent="flex-end"><Text color={profitColor}>{d.profit}G</Text></Box>
+                                    {/* Sales Gauge */}
+                                    <Box width={BAR_WIDTH + 2} paddingLeft={1}>
+                                        <Text color="cyan">{salesBar}</Text>
+                                        <Text dimColor>{salesEmpty}</Text>
+                                    </Box>
+                                </Box>
+                                <Box flexDirection="row">
+                                    <Box width={24}><Text> </Text></Box> {/* Spacer for Day/Sales/Profit columns */}
+                                    <Box width={BAR_WIDTH + 2} paddingLeft={1}>
+                                        <Text color={profitColor}>{profitBar}</Text>
+                                        <Text dimColor>{profitEmpty}</Text>
+                                    </Box>
+                                </Box>
+                            </Box>
+                        );
+                    })
+                )}
             </Box>
         );
     };
