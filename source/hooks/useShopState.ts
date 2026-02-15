@@ -64,8 +64,8 @@ export function useShopState({ state, setState, changeScene, advanceTime }: UseS
 
     const buyItem = useCallback(
         (item: Item) => {
-            // 卸値は定価の60% * 運勢補正
-            const purchasePrice = Math.floor(item.price * 0.6 * getPurchaseCostMultiplier(state.luck));
+            // 卸値は定価の90% * 運勢補正
+            const purchasePrice = Math.floor(item.price * 0.9 * getPurchaseCostMultiplier(state.luck));
 
             setState(prev => {
                 if (prev.gold < purchasePrice) {
