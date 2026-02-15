@@ -323,10 +323,8 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
                 return;
             }
             if (state.sellShop.displayItems.length === 0) {
-                // 商品がない場合は閉めるかメッセージ
-                updateSellShop(() => ({
-                    sellMessage: '陳列されている 商品が ありません！'
-                }));
+                // 商品がない場合は店を閉じる
+                closeShop();
             } else {
                 summonCustomer();
             }

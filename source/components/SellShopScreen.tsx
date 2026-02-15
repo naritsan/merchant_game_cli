@@ -44,6 +44,8 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
             if (key.return) {
                 // 次の客を呼ぶ（完売時は店を閉じる）
                 selectCommand();
+            } else if (key.escape) {
+                closeShop();
             }
             return;
         }
