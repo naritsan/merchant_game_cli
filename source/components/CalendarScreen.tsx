@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import BorderBox from './BorderBox.js';
 import { type GameState, type DayOfWeek, DAYS_OF_WEEK } from '../types/index.js';
+import { getGameDate, getDaysInMonth, getSeasonLabel, getSeasonColor, GAME_START_DAY_OFFSET } from '../utils/time.js';
 
 type Props = {
     state: GameState;
@@ -38,20 +39,34 @@ const getDayLabel = (day: DayOfWeek): string => {
 const DISPLAY_DAYS: DayOfWeek[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function CalendarScreen({ state, changeScene }: Props) {
-    // 現在の月（30日周期）の何日目か
-    // ゲーム開始時は1日目(月曜)
-    // 30日周期でカレンダーを表示する
-    const currentDay = state.day;
-    const currentMonth = Math.floor((currentDay - 1) / 30) + 1;
-    const dayInMonth = ((currentDay - 1) % 30) + 1;
+    // 現在の日付情報を取得 (オフセット適用)
+    const currentDate = getGameDate(state.day + GAME_START_DAY_OFFSET);
 
-    // カレンダーグリッドの作成
-    // 1日目が月曜日なので、日曜始まりのカレンダーではオフセットは1
-    const startDayOffset = 1;
-    const daysInMonth = 30;
+    // 現在の月の日数
+    const daysInMonth = getDaysInMonth(currentDate.year, currentDate.month);
+
+    // 月初（1日）の曜日を計算
+    // 現在の日（totalDays）から (day - 1) 日引くと、その月の1日のtotalDaysになる
+    const firstDayTotalDays = (state.day + GAME_START_DAY_OFFSET) - (currentDate.day - 1);
+    const firstDayDate = getGameDate(firstDayTotalDays);
+
+    // DISPLAY_DAYS (日, 月, 火...) におけるインデックスを計算
+    // DAYS_OF_WEEK (月, 火, 水...) のインデックスを取得
+    const firstDayOfWeekIndex = DAYS_OF_WEEK.indexOf(firstDayDate.dayOfWeek);
+    // 月(0) -> 1, 火(1) -> 2, ..., 土(5) -> 6, 日(6) -> 0
+    const startDayOffset = (firstDayOfWeekIndex + 1) % 7;
 
     // カーソル位置（初期位置は今日）
-    const [cursorDay, setCursorDay] = useState(dayInMonth);
+    const [cursorDay, setCursorDay] = useState(currentDate.day);
+
+    // カーソルの曜日を計算
+    // 1日の曜日インデックス(0-6, Sunday=0) + (cursorDay - 1)
+    // これを7で割った余りがカーソル日の曜日インデックス(0-6, Sunday=0)
+    // DISPLAY_DAYS[index] でDayOfWeekが取れる
+    const getDayOfWeekForCursor = (day: number): DayOfWeek => {
+        const offset = (startDayOffset + (day - 1)) % 7;
+        return DISPLAY_DAYS[offset]!;
+    };
 
     useInput((_input, key) => {
         if (key.return || key.escape) {
@@ -66,12 +81,6 @@ export default function CalendarScreen({ state, changeScene }: Props) {
             setCursorDay(prev => Math.min(daysInMonth, prev + 7));
         }
     });
-
-    const getDayOfWeekForDate = (date: number): DayOfWeek => {
-        // 1日目が月曜日(Index 0 of DAYS_OF_WEEK)
-        // (date - 1) % 7 がDAYS_OF_WEEKのIndex
-        return DAYS_OF_WEEK[(date - 1) % 7]!;
-    };
 
     const renderCalendarGrid = () => {
         const rows = [];
@@ -99,10 +108,12 @@ export default function CalendarScreen({ state, changeScene }: Props) {
         return rows.map((row, rowIndex) => (
             <Box key={rowIndex} flexDirection="row">
                 {row.map((day, colIndex) => {
-                    const isToday = day === dayInMonth;
+                    const isToday = day === currentDate.day;
                     const isCursor = day === cursorDay;
-                    const dayOfWeek = day ? getDayOfWeekForDate(day) : undefined;
-                    const isSunday = dayOfWeek === 'Sunday';
+
+                    // このセルの曜日
+                    // colIndex 0 = Sunday
+                    const isSunday = colIndex === 0;
 
                     let cellColor = 'white';
                     if (isToday) cellColor = 'green';
@@ -127,15 +138,19 @@ export default function CalendarScreen({ state, changeScene }: Props) {
         ));
     };
 
-    const cursorDayOfWeek = getDayOfWeekForDate(cursorDay);
+    const cursorDayOfWeek = getDayOfWeekForCursor(cursorDay);
     const cursorDescription = getDayEventDescription(cursorDayOfWeek);
+    const seasonLabel = getSeasonLabel(currentDate.season);
+    const seasonColor = getSeasonColor(currentDate.season);
 
     return (
         <Box flexDirection="column" width={60}>
             <BorderBox>
                 <Box flexDirection="column" paddingX={1}>
                     <Box justifyContent="center" marginBottom={1}>
-                        <Text bold color="yellow">=== {currentMonth}ヶ月目 ===</Text>
+                        <Text bold color="yellow">=== {currentDate.year}年 {currentDate.month}月 (</Text>
+                        <Text bold backgroundColor={seasonColor} color="black"> {seasonLabel} </Text>
+                        <Text bold color="yellow">) ===</Text>
                     </Box>
 
                     {/* Header Row */}
@@ -162,7 +177,7 @@ export default function CalendarScreen({ state, changeScene }: Props) {
                         </Text>
                     </Box>
                     <Box marginTop={0}>
-                        {cursorDay === dayInMonth && <Text color="green">★ 今日</Text>}
+                        {cursorDay === currentDate.day && <Text color="green">★ 今日</Text>}
                     </Box>
 
                 </Box>

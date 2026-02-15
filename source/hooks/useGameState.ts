@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { type GameState, type Weather, type DayOfWeek, type Luck, BATTLE_COMMANDS, DAYS_OF_WEEK } from '../types/index.js';
+import { type GameState, type Weather, type Luck, BATTLE_COMMANDS } from '../types/index.js';
+import { getGameDate, GAME_START_DAY_OFFSET } from '../utils/time.js';
 
 const initialState: GameState = {
     scene: 'menu',
@@ -38,7 +39,7 @@ const initialState: GameState = {
     hour: 9,
     minute: 0,
     weather: 'sunny',
-    dayOfWeek: 'Monday',
+    dayOfWeek: 'Sunday', // 1年4月1日は日曜(1/1が月曜の場合)
     luck: 'Normal', // 初期値はNormalにしておく（ランダムにするならuseGameState内で再設定）
     isLuckRevealed: false,
 };
@@ -62,16 +63,13 @@ export function useGameState() {
         return lucks[rand]!;
     };
 
-    const nextDayOfWeek = (current: DayOfWeek): DayOfWeek => {
-        const currentIndex = DAYS_OF_WEEK.indexOf(current);
-        return DAYS_OF_WEEK[(currentIndex + 1) % DAYS_OF_WEEK.length]!;
-    };
-
     const updateDailyState = (prevState: GameState): Partial<GameState> => {
+        const nextDay = prevState.day + 1;
+        const dateInfo = getGameDate(nextDay + GAME_START_DAY_OFFSET);
         return {
-            day: prevState.day + 1,
+            day: nextDay,
             weather: determineWeather(),
-            dayOfWeek: nextDayOfWeek(prevState.dayOfWeek),
+            dayOfWeek: dateInfo.dayOfWeek,
             luck: determineLuck(),
             isLuckRevealed: false,
         };

@@ -45,19 +45,28 @@ const getLuckLabel = (luck: Luck): { label: string; color: string } => {
     }
 };
 
+import { getGameDate, getSeasonLabel, getSeasonColor, GAME_START_DAY_OFFSET } from '../utils/time.js';
+
 export default function Header({ state }: Props) {
-    const dayLabel = getDayLabel(state.dayOfWeek);
-    const timeString = `${state.day}日目(${dayLabel}) ${state.hour}:${state.minute.toString().padStart(2, '0')}`;
+    const dateInfo = getGameDate(state.day + GAME_START_DAY_OFFSET);
+    const dayLabel = getDayLabel(dateInfo.dayOfWeek);
+    const seasonLabel = getSeasonLabel(dateInfo.season);
+    const seasonColor = getSeasonColor(dateInfo.season);
+
     const weather = getWeatherInfo(state.weather);
     const luckInfo = state.isLuckRevealed ? getLuckLabel(state.luck) : { label: '?', color: 'gray' };
 
     return (
-        <Box justifyContent="space-between" marginY={1} paddingX={1} width={64}>
+        <Box justifyContent="space-between" marginY={1} paddingX={1} width={80}>
             <Box>
                 <Text bold color="yellow">所持金: {state.gold}G</Text>
             </Box>
             <Box>
-                <Text bold>{timeString}</Text>
+                <Text bold>
+                    {dateInfo.year}年目 {dateInfo.month}月{dateInfo.day}日({dayLabel}) [{state.day}日目]{' '}
+                </Text>
+                <Text bold backgroundColor={seasonColor} color="black"> {seasonLabel} </Text>
+                <Text bold>{state.hour}:{state.minute.toString().padStart(2, '0')}</Text>
                 <Text> </Text>
                 <Text bold color={weather.color} inverse> {weather.icon} {weather.label} </Text>
                 <Text> </Text>

@@ -184,6 +184,11 @@ export type DayOfWeek = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Frida
 
 export const DAYS_OF_WEEK: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+// === 季節 ===
+export type Season = 'Spring' | 'Summer' | 'Autumn' | 'Winter';
+
+export const SEASONS: Season[] = ['Spring', 'Summer', 'Autumn', 'Winter'];
+
 // === 運勢 ===
 export type Luck = 'Divine' | 'Miracle' | 'Blessing' | 'Fortune' | 'Normal' | 'BadOmen' | 'Curse' | 'Doom' | 'Apocalypse';
 
