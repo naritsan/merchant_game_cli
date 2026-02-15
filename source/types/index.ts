@@ -173,6 +173,9 @@ export type GameState = {
 	luck: Luck;
 	isLuckRevealed: boolean;
 	showCustomerBudget: boolean; // デバッグ用：客の予算を表示するか
+	menuMode: 'main' | 'submenu';
+	selectedMain: number;
+	selectedSub: number;
 };
 
 // === 天気 ===

@@ -102,11 +102,18 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
     const moveCommand = useCallback(
         (direction: 'up' | 'down') => {
             updateSellShop(prev => {
+                const { customer } = prev;
+                const filteredCommands = SELL_SHOP_COMMANDS.filter(cmd => {
+                    if (cmd === 'うる' && customer && customer.targetPrice > customer.maxBudget && customer.currentNegotiation > 0) {
+                        return false;
+                    }
+                    return true;
+                });
                 const next =
                     direction === 'up'
-                        ? (prev.selectedCommand - 1 + SELL_SHOP_COMMANDS.length) %
-                        SELL_SHOP_COMMANDS.length
-                        : (prev.selectedCommand + 1) % SELL_SHOP_COMMANDS.length;
+                        ? (prev.selectedCommand - 1 + filteredCommands.length) %
+                        filteredCommands.length
+                        : (prev.selectedCommand + 1) % filteredCommands.length;
                 return { selectedCommand: next };
             });
         },
@@ -155,14 +162,27 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
 
         // 値札が高すぎて予算オーバーの場合
         if (customer.targetPrice > customer.maxBudget) {
-            updateSellShop(() => ({
-                sellMessage: `「${customer.targetPrice} G か…\n  もうすこし 安ければ 買えるのだが…」\n（ねびき で 交渉できます）`
-            }));
+            const nextNegotiation = customer.currentNegotiation + 1;
+
+            if (nextNegotiation < customer.maxNegotiations) {
+                updateSellShop(() => ({
+                    customer: { ...customer, currentNegotiation: nextNegotiation },
+                    sellMessage: `「${customer.targetPrice} G か…\n  もうすこし 安ければ 買えるのだが…」\n（ねびき で 交渉できます）`
+                }));
+            } else {
+                // 交渉終了
+                updateSellShop(() => ({
+                    customer: null,
+                    sellMessage: `「${customer.targetPrice} G か… えんが なかったようだな」\n（客は かえっていった…）`,
+                    isWaiting: true
+                }));
+                advanceTime(30);
+            }
             return;
         }
 
         executeSale(customer.targetPrice, customer.wantItem.name);
-    }, [state.sellShop, updateSellShop, executeSale]);
+    }, [state.sellShop, updateSellShop, executeSale, advanceTime]);
 
     // 値引き（カウンター）
     const discount = useCallback((offeredPrice?: number) => {
@@ -257,7 +277,15 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
             return;
         }
 
-        const command = SELL_SHOP_COMMANDS[sellShop.selectedCommand]!;
+        const { customer } = sellShop;
+        const filteredCommands = SELL_SHOP_COMMANDS.filter(cmd => {
+            if (cmd === 'うる' && customer && customer.targetPrice > customer.maxBudget && customer.currentNegotiation > 0) {
+                return false;
+            }
+            return true;
+        });
+
+        const command = filteredCommands[sellShop.selectedCommand]!;
         switch (command) {
             case 'うる': {
                 sellToCustomer();
@@ -278,8 +306,6 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
                 closeShop();
                 break;
             }
-
-            // No default
         }
     }, [sellShop.selectedCommand, sellShop.isWaiting, sellToCustomer, discount, refuse, summonCustomer, updateSellShop, changeScene]);
 

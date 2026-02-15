@@ -52,7 +52,15 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
             } else if (key.downArrow) {
                 moveCommand('down');
             } else if (key.return) {
-                const command = SELL_SHOP_COMMANDS[sellShop.selectedCommand];
+                const { customer } = sellShop;
+                const filteredCommands = SELL_SHOP_COMMANDS.filter(cmd => {
+                    if (cmd === 'うる' && customer && customer.targetPrice > customer.maxBudget && customer.currentNegotiation > 0) {
+                        return false;
+                    }
+                    return true;
+                });
+                const command = filteredCommands[sellShop.selectedCommand];
+
                 if (command === 'うる') {
                     sellToCustomer();
                 } else if (command === 'ねびき') {
@@ -120,6 +128,7 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                                     <Text bold>{customer.name}</Text>
                                     <Text> </Text>
                                     <Text>希望: {customer.wantItem.name}</Text>
+                                    <Text dimColor>定価: {customer.wantItem.price} G</Text>
                                     {state.showCustomerBudget && (
                                         <Text dimColor>(予算: {customer.maxBudget} G)</Text>
                                     )}
@@ -190,7 +199,7 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                         (() => {
                             const { customer } = sellShop;
                             const filteredCommands = SELL_SHOP_COMMANDS.filter(cmd => {
-                                if (cmd === 'うる' && customer && customer.targetPrice > customer.maxBudget) {
+                                if (cmd === 'うる' && customer && customer.targetPrice > customer.maxBudget && customer.currentNegotiation > 0) {
                                     return false;
                                 }
                                 return true;

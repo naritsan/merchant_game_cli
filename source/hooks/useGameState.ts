@@ -43,11 +43,13 @@ const initialState: GameState = {
     luck: 'Normal', // 初期値はNormal
     isLuckRevealed: false,
     showCustomerBudget: false,
+    menuMode: 'main',
+    selectedMain: 0,
+    selectedSub: 0,
 };
 
 export function useGameState() {
     const [state, setState] = useState<GameState>(initialState);
-
 
     const determineWeather = (): Weather => {
         const rand = Math.random() * 100;

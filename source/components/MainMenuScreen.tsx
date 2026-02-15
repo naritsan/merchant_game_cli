@@ -31,9 +31,25 @@ const WEATHER_LABELS: Record<string, string> = {
 
 export default function MainMenuScreen({ state, setState, changeScene, sleep, advanceTime }: Props) {
     const { exit } = useApp();
-    const [mode, setMode] = React.useState<MenuMode>('main');
-    const [selectedMain, setSelectedMain] = React.useState(0);
-    const [selectedSub, setSelectedSub] = React.useState(0);
+    const mode = state.menuMode;
+    const selectedMain = state.selectedMain;
+    const selectedSub = state.selectedSub;
+
+    const setMode = (m: MenuMode) => {
+        if (m === 'main' || m === 'submenu') {
+            setState(prev => ({ ...prev, menuMode: m }));
+        } else {
+            setLocalMode(m);
+        }
+    };
+    const [localMode, setLocalMode] = React.useState<MenuMode>('main');
+    const currentMode = (mode === 'main' || mode === 'submenu') ? mode : localMode;
+
+    const setSelectedMain = (s: number | ((prev: number) => number)) =>
+        setState(prev => ({ ...prev, selectedMain: typeof s === 'function' ? s(prev.selectedMain) : s }));
+    const setSelectedSub = (s: number | ((prev: number) => number)) =>
+        setState(prev => ({ ...prev, selectedSub: typeof s === 'function' ? s(prev.selectedSub) : s }));
+
     const [restSelected, setRestSelected] = React.useState(0);
     const [confirmSelected, setConfirmSelected] = React.useState(0);
 
@@ -212,7 +228,7 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
     useInput((_input, key) => {
         setMessage('');
 
-        if (mode === 'main') {
+        if (currentMode === 'main') {
             if (key.upArrow) {
                 setSelectedMain(prev => (prev - 1 + mainMenuItems.length) % mainMenuItems.length);
             } else if (key.downArrow) {
@@ -239,7 +255,7 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
                     handleCommand('おわる');
                 }
             }
-        } else if (mode === 'submenu') {
+        } else if (currentMode === 'submenu') {
             if (key.upArrow) {
                 setSelectedSub(prev => (prev - 1 + submenuItems.length) % submenuItems.length);
             } else if (key.downArrow) {
@@ -254,7 +270,7 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
                     handleCommand(item);
                 }
             }
-        } else if (mode === 'rest') {
+        } else if (currentMode === 'rest') {
             if (key.upArrow) {
                 setRestSelected(prev => (prev - 1 + restOptions.length) % restOptions.length);
             } else if (key.downArrow) {
@@ -292,7 +308,7 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
                     setMode('main');
                 }
             }
-        } else if (mode === 'confirm') {
+        } else if (currentMode === 'confirm') {
             if (key.leftArrow || key.upArrow) {
                 setConfirmSelected(0);
             } else if (key.rightArrow || key.downArrow) {
@@ -307,19 +323,19 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
                 setMode('main');
                 setConfirmAction(null);
             }
-        } else if (mode === 'debug_date') {
+        } else if (currentMode === 'debug_date') {
             if (key.leftArrow) updateDate(-10);
             if (key.rightArrow) updateDate(10);
             if (key.downArrow) updateDate(-1);
             if (key.upArrow) updateDate(1);
             if (key.escape || key.return) setMode('submenu');
-        } else if (mode === 'debug_time') {
+        } else if (currentMode === 'debug_time') {
             if (key.leftArrow) updateTime(-60); // 1時間
             if (key.rightArrow) updateTime(60); // 1時間
             if (key.downArrow) updateTime(-30);
             if (key.upArrow) updateTime(30);
             if (key.escape || key.return) setMode('submenu');
-        } else if (mode === 'debug_luck') {
+        } else if (currentMode === 'debug_luck') {
             if (key.upArrow) {
                 setDebugLuckSelected(prev => (prev - 1 + LUCK_TYPES.length) % LUCK_TYPES.length);
             } else if (key.downArrow) {
@@ -330,7 +346,7 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
                 setState(prev => ({ ...prev, luck: LUCK_TYPES[debugLuckSelected]!, isLuckRevealed: true }));
                 setMode('submenu');
             }
-        } else if (mode === 'debug_weather') {
+        } else if (currentMode === 'debug_weather') {
             if (key.upArrow) {
                 setDebugWeatherSelected(prev => (prev - 1 + WEATHER_TYPES.length) % WEATHER_TYPES.length);
             } else if (key.downArrow) {
@@ -341,7 +357,7 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
                 setState(prev => ({ ...prev, weather: WEATHER_TYPES[debugWeatherSelected]! }));
                 setMode('submenu');
             }
-        } else if (mode === 'debug_gold') {
+        } else if (currentMode === 'debug_gold') {
             if (key.leftArrow) updateGold(-1000);
             if (key.rightArrow) updateGold(1000);
             if (key.downArrow) updateGold(-100);
@@ -381,7 +397,7 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
 
             {/* Menu */}
             <BorderBox>
-                {mode === 'main' ? (
+                {currentMode === 'main' ? (
                     <Box flexDirection="column">
                         <Text bold color="green">  【メインメニュー】</Text>
                         <CommandMenu
@@ -389,7 +405,7 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
                             selectedIndex={selectedMain}
                         />
                     </Box>
-                ) : mode === 'submenu' ? (
+                ) : currentMode === 'submenu' ? (
                     <Box flexDirection="column">
                         <Text bold color="green">  【{currentCategory?.label}】</Text>
                         <CommandMenu
@@ -397,7 +413,7 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
                             selectedIndex={selectedSub}
                         />
                     </Box>
-                ) : mode === 'rest' ? (
+                ) : currentMode === 'rest' ? (
                     <Box flexDirection="column">
                         <Text bold color="green">  どのくらい 休む？</Text>
                         {isNight && <Text color="blue">  もう夜が更けてきた…</Text>}
@@ -406,21 +422,21 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
                             selectedIndex={restSelected}
                         />
                     </Box>
-                ) : mode === 'debug_date' ? (
+                ) : currentMode === 'debug_date' ? (
                     <Box flexDirection="column" alignItems="center">
                         <Text bold color="yellow">【日付変更】</Text>
                         <Text>Day: {state.day} ({state.dayOfWeek})</Text>
                         <Text dimColor>← -10 / +10 →</Text>
                         <Text dimColor>↓ -1 / +1 ↑</Text>
                     </Box>
-                ) : mode === 'debug_time' ? (
+                ) : currentMode === 'debug_time' ? (
                     <Box flexDirection="column" alignItems="center">
                         <Text bold color="yellow">【時間変更】</Text>
                         <Text>{String(state.hour).padStart(2, '0')}:{String(state.minute).padStart(2, '0')}</Text>
                         <Text dimColor>← -1時間 / +1時間 →</Text>
                         <Text dimColor>↓ -30分 / +30分 ↑</Text>
                     </Box>
-                ) : mode === 'debug_luck' ? (
+                ) : currentMode === 'debug_luck' ? (
                     <Box flexDirection="column">
                         <Text bold color="yellow">【運勢変更】</Text>
                         <CommandMenu
@@ -428,7 +444,7 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
                             selectedIndex={debugLuckSelected}
                         />
                     </Box>
-                ) : mode === 'debug_weather' ? (
+                ) : currentMode === 'debug_weather' ? (
                     <Box flexDirection="column">
                         <Text bold color="yellow">【天気変更】</Text>
                         <CommandMenu
@@ -436,7 +452,7 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
                             selectedIndex={debugWeatherSelected}
                         />
                     </Box>
-                ) : mode === 'debug_gold' ? (
+                ) : currentMode === 'debug_gold' ? (
                     <Box flexDirection="column" alignItems="center">
                         <Text bold color="yellow">【所持金変更】</Text>
                         <Text>所持金: {state.gold} G</Text>
@@ -464,12 +480,12 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
 
             {/* Help */}
             <Box justifyContent="center" marginTop={1}>
-                {mode === 'confirm' ? (
+                {currentMode === 'confirm' ? (
                     <Text dimColor>←→: 選択  Enter: 決定  Esc: キャンセル</Text>
-                ) : ['debug_date', 'debug_time', 'debug_gold'].includes(mode) ? (
+                ) : ['debug_date', 'debug_time', 'debug_gold'].includes(currentMode) ? (
                     <Text dimColor>矢印キー: 変更  Enter/Esc: 戻る</Text>
                 ) : (
-                    <Text dimColor>↑↓: 選択  Enter: 決定  {mode !== 'main' ? 'Esc: 戻る' : ''}</Text>
+                    <Text dimColor>↑↓: 選択  Enter: 決定  {currentMode !== 'main' ? 'Esc: 戻る' : ''}</Text>
                 )}
             </Box>
         </Box>
