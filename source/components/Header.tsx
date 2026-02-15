@@ -66,8 +66,8 @@ export default function Header({ state }: Props) {
 
     return (
         <Box marginY={1} paddingX={1}>
-            <Box marginRight={3}>
-                <Text bold color="yellow">所持金: {state.gold}G</Text>
+            <Box marginRight={2}>
+                <Text bold color="yellow">💰{state.gold}G</Text>
             </Box>
             <Box>
                 <Text bold>
