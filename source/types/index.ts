@@ -5,13 +5,6 @@ import { ItemId, ItemData } from './items.js';
 // Legacy Item type alias for compatibility during refactor, or we can just use ItemData
 export type Item = ItemData;
 
-// === 在庫アイテム (Legacy - to be removed/refactored) ===
-// Keeping for a moment if needed, but we are switching to StackableItem
-export type InventoryItem = {
-	item: Item;
-	purchasePrice: number;
-};
-
 // === 新しいインベントリシステム ===
 
 export type StackableItem = {
@@ -190,7 +183,6 @@ export type GameState = {
 	messages: string[];
 	selectedCommand: number;
 	gold: number;
-	// inventory: InventoryItem[]; // Removed
 	possessions: StackableItem[];
 	stock: StockItem[];
 	transactions: TransactionRecord[];
