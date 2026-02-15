@@ -65,13 +65,13 @@ export default function Header({ state }: Props) {
     const luckInfo = state.isLuckRevealed ? getLuckLabel(state.luck) : { label: '?', color: 'gray' };
 
     return (
-        <Box justifyContent="space-between" marginY={1} paddingX={1} width={80}>
-            <Box>
+        <Box marginY={1} paddingX={1}>
+            <Box marginRight={3}>
                 <Text bold color="yellow">所持金: {state.gold}G</Text>
             </Box>
             <Box>
                 <Text bold>
-                    {dateInfo.year}年目 {dateInfo.month}月{dateInfo.day}日<Text color={dayColor}>({dayLabel})</Text> [{state.day}日目]
+                    {dateInfo.year}年目 {dateInfo.month}月{dateInfo.day}日<Text color={dayColor}>({dayLabel})</Text>
                 </Text>
                 <Text> </Text>
                 <Text backgroundColor={seasonColor} color="#000000">{seasonLabel}</Text>

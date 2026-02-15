@@ -151,6 +151,10 @@ export default function CalendarScreen({ state, changeScene }: Props) {
     const seasonLabel = getSeasonLabel(currentDate.season);
     const seasonColor = getSeasonColor(currentDate.season);
 
+    // カーソル位置の通算日（ゲーム開始からの日数）を計算
+    const cursorTotalDays = firstDayTotalDays + (cursorDay - 1);
+    const cursorGameDay = cursorTotalDays - GAME_START_DAY_OFFSET;
+
     return (
         <Box flexDirection="column" width={60}>
             <BorderBox>
@@ -183,6 +187,7 @@ export default function CalendarScreen({ state, changeScene }: Props) {
                             <Text bold color="cyan">[{cursorDay}日 </Text>
                             <Text bold color={getDayColor(cursorDayOfWeek)}>({getDayLabel(cursorDayOfWeek)})</Text>
                             <Text bold color="cyan">]</Text>
+                            <Text dimColor> [{cursorGameDay <= 0 ? '---' : `${cursorGameDay}日目`}]</Text>
                             : {cursorDescription}
                         </Text>
                     </Box>
