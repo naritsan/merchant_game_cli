@@ -30,6 +30,13 @@ const getDayLabel = (day: DayOfWeek): string => {
     }
 };
 
+const getDayColor = (day: DayOfWeek): string => {
+    switch (day) {
+        case 'Sunday': return 'red';
+        case 'Saturday': return 'blue';
+        default: return 'white';
+    }
+};
 const getLuckLabel = (luck: Luck): { label: string; color: string } => {
     switch (luck) {
         case 'Divine': return { label: '神の加護', color: 'yellow' };
@@ -50,6 +57,7 @@ import { getGameDate, getSeasonLabel, getSeasonColor, GAME_START_DAY_OFFSET } fr
 export default function Header({ state }: Props) {
     const dateInfo = getGameDate(state.day + GAME_START_DAY_OFFSET);
     const dayLabel = getDayLabel(dateInfo.dayOfWeek);
+    const dayColor = getDayColor(dateInfo.dayOfWeek);
     const seasonLabel = getSeasonLabel(dateInfo.season);
     const seasonColor = getSeasonColor(dateInfo.season);
 
@@ -63,9 +71,11 @@ export default function Header({ state }: Props) {
             </Box>
             <Box>
                 <Text bold>
-                    {dateInfo.year}年目 {dateInfo.month}月{dateInfo.day}日({dayLabel}) [{state.day}日目]{' '}
+                    {dateInfo.year}年目 {dateInfo.month}月{dateInfo.day}日<Text color={dayColor}>({dayLabel})</Text> [{state.day}日目]
                 </Text>
-                <Text bold backgroundColor={seasonColor} color="black"> {seasonLabel} </Text>
+                <Text> </Text>
+                <Text backgroundColor={seasonColor} color="#000000">{seasonLabel}</Text>
+                <Text> </Text>
                 <Text bold>{state.hour}:{state.minute.toString().padStart(2, '0')}</Text>
                 <Text> </Text>
                 <Text bold color={weather.color} inverse> {weather.icon} {weather.label} </Text>

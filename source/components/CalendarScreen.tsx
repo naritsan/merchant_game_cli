@@ -35,6 +35,14 @@ const getDayLabel = (day: DayOfWeek): string => {
     }
 };
 
+const getDayColor = (day: DayOfWeek): string => {
+    switch (day) {
+        case 'Sunday': return 'red';
+        case 'Saturday': return 'blue';
+        default: return 'white';
+    }
+};
+
 // 表示用の曜日順（日曜始まり）
 const DISPLAY_DAYS: DayOfWeek[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -111,14 +119,14 @@ export default function CalendarScreen({ state, changeScene }: Props) {
                     const isToday = day === currentDate.day;
                     const isCursor = day === cursorDay;
 
-                    // このセルの曜日
-                    // colIndex 0 = Sunday
                     const isSunday = colIndex === 0;
+                    const isSaturday = colIndex === 6;
 
                     let cellColor = 'white';
                     if (isToday) cellColor = 'green';
                     else if (isCursor) cellColor = 'cyan';
                     else if (isSunday) cellColor = 'red';
+                    else if (isSaturday) cellColor = 'blue';
                     else if (!day) cellColor = 'gray';
 
                     return (
@@ -148,16 +156,16 @@ export default function CalendarScreen({ state, changeScene }: Props) {
             <BorderBox>
                 <Box flexDirection="column" paddingX={1}>
                     <Box justifyContent="center" marginBottom={1}>
-                        <Text bold color="yellow">=== {currentDate.year}年 {currentDate.month}月 (</Text>
-                        <Text bold backgroundColor={seasonColor} color="black"> {seasonLabel} </Text>
-                        <Text bold color="yellow">) ===</Text>
+                        <Text bold color="yellow">=== {currentDate.year}年 {currentDate.month}月 </Text>
+                        <Text backgroundColor={seasonColor} color="#000000">{seasonLabel}</Text>
+                        <Text bold color="yellow"> ===</Text>
                     </Box>
 
                     {/* Header Row */}
                     <Box flexDirection="row" borderStyle="single" borderBottom={false} borderTop={false} borderLeft={false} borderRight={false}>
                         {DISPLAY_DAYS.map(d => (
                             <Box key={d} width={4} justifyContent="center">
-                                <Text color={d === 'Sunday' ? 'red' : 'white'}>
+                                <Text color={d === 'Sunday' ? 'red' : d === 'Saturday' ? 'blue' : 'white'}>
                                     {getDayLabel(d)}
                                 </Text>
                             </Box>
@@ -172,7 +180,9 @@ export default function CalendarScreen({ state, changeScene }: Props) {
                     <Text>----------------------------</Text>
                     <Box marginTop={1}>
                         <Text>
-                            <Text bold color="cyan">[{cursorDay}日 ({getDayLabel(cursorDayOfWeek)})]</Text>
+                            <Text bold color="cyan">[{cursorDay}日 </Text>
+                            <Text bold color={getDayColor(cursorDayOfWeek)}>({getDayLabel(cursorDayOfWeek)})</Text>
+                            <Text bold color="cyan">]</Text>
                             : {cursorDescription}
                         </Text>
                     </Box>

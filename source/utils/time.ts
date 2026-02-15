@@ -53,9 +53,9 @@ export const getSeasonLabel = (season: Season): string => {
 
 export const getSeasonColor = (season: Season): string => {
     switch (season) {
-        case 'Spring': return 'green';
+        case 'Spring': return '#FF66CC'; // ピンク
         case 'Summer': return 'red';
-        case 'Autumn': return 'yellow';
+        case 'Autumn': return '#FF8800'; // オレンジ
         case 'Winter': return 'blue';
     }
 };
