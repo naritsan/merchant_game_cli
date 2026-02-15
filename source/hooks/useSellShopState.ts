@@ -4,10 +4,12 @@ import {
     type Customer,
     type SellShopState,
     type DisplayItem,
+    type TransactionRecord,
     CUSTOMERS,
     SELL_SHOP_COMMANDS,
     type Luck,
 } from '../types/index.js';
+import { getItem } from '../types/items.js';
 import { getCustomerBudgetMultiplier } from '../utils/luckUtils.js';
 
 type UseSellShopStateArgs = {
@@ -17,29 +19,30 @@ type UseSellShopStateArgs = {
     advanceTime: (minutes: number) => void;
 };
 
+// ヘルパー: DisplayItemからCustomerを生成
 function generateCustomer(displayItems: DisplayItem[], luck: Luck): Customer | null {
     if (displayItems.length === 0) return null;
 
     const template = CUSTOMERS[Math.floor(Math.random() * CUSTOMERS.length)]!;
     const targetDisplayItem = displayItems[Math.floor(Math.random() * displayItems.length)]!;
-    const wantItem = targetDisplayItem.inventoryItem.item;
+    const wantItemData = getItem(targetDisplayItem.stockItem.itemId);
 
     // 客の予算はアイテム定価の80%〜110%でランダム
     const budgetRate = 0.8 + Math.random() * 0.3;
     // 運勢補正を適用
-    const maxBudget = Math.floor(wantItem.price * budgetRate * getCustomerBudgetMultiplier(luck));
+    const maxBudget = Math.floor(wantItemData.price * budgetRate * getCustomerBudgetMultiplier(luck));
 
     const dialogues = [
-        `${wantItem.name} が ほしいのですが…`,
-        `${wantItem.name} は ありますか？`,
-        `${wantItem.name} を ください！`,
-        `${wantItem.name} を さがしています。`,
+        `${wantItemData.name} が ほしいのですが…`,
+        `${wantItemData.name} は ありますか？`,
+        `${wantItemData.name} を ください！`,
+        `${wantItemData.name} を さがしています。`,
     ];
     const dialogue = dialogues[Math.floor(Math.random() * dialogues.length)]!;
 
     return {
         ...template,
-        wantItem,
+        wantItem: wantItemData.id, // IDを使用
         targetPrice: targetDisplayItem.price,
         maxBudget,
         currentNegotiation: 0,
@@ -60,19 +63,52 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
         [setState],
     );
 
-    // 店を閉じる処理の共通化
+    // 店を閉じる処理
     const closeShop = useCallback(() => {
-        updateSellShop(() => ({
-            customer: null,
-            sellMessage: '商品を 陳列して ください',
-            selectedCommand: 0,
-            salesCount: 0,
-            isWaiting: false,
-            currentSales: 0,
-            currentProfit: 0,
-        }));
+        setState(prev => {
+            // 売れ残った商品を在庫（Stock）に戻す
+            const currentStock = [...prev.stock];
+
+            prev.sellShop.displayItems.forEach(displayItem => {
+                const { stockItem } = displayItem;
+                const existingIndex = currentStock.findIndex(s => s.itemId === stockItem.itemId);
+
+                if (existingIndex >= 0) {
+                    // 既存の在庫とマージ
+                    const existing = currentStock[existingIndex]!;
+                    // 移動平均の再計算 (既存在庫 * 価格 + 戻り分 * 価格) / 合計個数
+                    const totalValue = (existing.averagePurchasePrice * existing.quantity) + (stockItem.averagePurchasePrice * stockItem.quantity);
+                    const newQuantity = existing.quantity + stockItem.quantity;
+
+                    currentStock[existingIndex] = {
+                        ...existing,
+                        quantity: newQuantity,
+                        averagePurchasePrice: totalValue / newQuantity
+                    };
+                } else {
+                    // 新規在庫として戻す
+                    currentStock.push(stockItem);
+                }
+            });
+
+            return {
+                ...prev,
+                stock: currentStock,
+                sellShop: {
+                    ...prev.sellShop,
+                    displayItems: [], // 陳列クリア
+                    customer: null,
+                    sellMessage: '商品を 陳列して ください',
+                    selectedCommand: 0,
+                    salesCount: 0,
+                    isWaiting: false,
+                    currentSales: 0,
+                    currentProfit: 0,
+                }
+            };
+        });
         changeScene('menu');
-    }, [updateSellShop, changeScene]);
+    }, [changeScene, setState]);
 
     // 客を呼ぶ
     const summonCustomer = useCallback(() => {
@@ -96,7 +132,7 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
             selectedCommand: 0,
             isWaiting: false,
         }));
-    }, [state.sellShop.displayItems, updateSellShop]);
+    }, [state.sellShop.displayItems, state.luck, updateSellShop]);
 
     // コマンド移動
     const moveCommand = useCallback(
@@ -120,30 +156,61 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
         [updateSellShop],
     );
 
-    // 商品売却と陳列の更新
-    const executeSale = useCallback((price: number, itemName: string) => {
+    // 商品売却と陈列の更新
+    const executeSale = useCallback((price: number, itemId: string) => {
         setState(prev => {
-            // 陳列から対象の商品を探して削除
-            // 同じ商品が複数ある場合は、最初の1つを売る
             const displayIndex = prev.sellShop.displayItems.findIndex(
-                d => d.inventoryItem.item.name === itemName
+                d => d.stockItem.itemId === itemId
             );
 
             if (displayIndex === -1) return prev;
 
-            const newDisplayItems = [...prev.sellShop.displayItems];
-            newDisplayItems.splice(displayIndex, 1);
+            const targetDisplayItem = prev.sellShop.displayItems[displayIndex]!;
+            const itemData = getItem(itemId as any); // Type assertion safely
 
-            const profit = price - (prev.sellShop.displayItems[displayIndex]?.inventoryItem.purchasePrice ?? 0);
+            // 利益計算
+            const profit = price - targetDisplayItem.originalCost;
+
+            // 在庫（陳列）から減らす
+            const newDisplayItems = [...prev.sellShop.displayItems];
+
+            // スタック処理：陳列もスタックされている場合、数量を減らす
+            // 現状の実装では DisplayItem 内の stockItem.quantity を減らす
+            // もし quantity が 1 なら DisplayItem 自体を削除
+
+            const currentQuantity = targetDisplayItem.stockItem.quantity;
+            if (currentQuantity > 1) {
+                newDisplayItems[displayIndex] = {
+                    ...targetDisplayItem,
+                    stockItem: {
+                        ...targetDisplayItem.stockItem,
+                        quantity: currentQuantity - 1
+                    }
+                };
+            } else {
+                newDisplayItems.splice(displayIndex, 1);
+            }
+
+            // === 取引履歴の記録 ===
+            const transaction: TransactionRecord = {
+                id: crypto.randomUUID(),
+                date: { day: prev.day, hour: prev.hour, minute: prev.minute },
+                type: 'sell',
+                itemId: itemId as any,
+                quantity: 1,
+                price: price, // 売値
+                totalPrice: price,
+                partner: prev.sellShop.customer?.name ?? 'Customer',
+            };
 
             return {
                 ...prev,
                 gold: prev.gold + price,
-                // inventoryは陳列時に既に減っているので操作しない
+                transactions: [...prev.transactions, transaction],
                 sellShop: {
                     ...prev.sellShop,
                     displayItems: newDisplayItems,
-                    sellMessage: `${itemName} を ${price} G で うりました！`,
+                    sellMessage: `${itemData.name} を ${price} G で うりました！`,
                     salesCount: prev.sellShop.salesCount + 1,
                     customer: null,
                     isWaiting: true,
@@ -181,7 +248,7 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
             return;
         }
 
-        executeSale(customer.targetPrice, customer.wantItem.name);
+        executeSale(customer.targetPrice, customer.wantItem);
     }, [state.sellShop, updateSellShop, executeSale, advanceTime]);
 
     // 値引き（カウンター）
@@ -195,7 +262,7 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
 
         // 予算内に入った場合 -> 売れる
         if (newPrice <= customer.maxBudget) {
-            executeSale(newPrice, customer.wantItem.name);
+            executeSale(newPrice, customer.wantItem);
             updateSellShop(() => ({
                 sellMessage: `「ありがとう！ それなら 買います！」\n（${newPrice} G で うれました）`
             }));
@@ -307,7 +374,7 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
                 break;
             }
         }
-    }, [sellShop.selectedCommand, sellShop.isWaiting, sellToCustomer, discount, refuse, summonCustomer, updateSellShop, changeScene]);
+    }, [sellShop.selectedCommand, sellShop.isWaiting, sellShop.sellMessage, state.sellShop.displayItems.length, state.hour, sellToCustomer, discount, refuse, summonCustomer, updateSellShop, closeShop]);
 
     // みせをひらく（最初の客を呼ぶ）
     const openShop = useCallback(() => {

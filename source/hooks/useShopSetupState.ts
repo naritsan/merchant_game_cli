@@ -1,35 +1,65 @@
 import { useCallback } from 'react';
-import { type GameState, type DisplayItem } from '../types/index.js';
+import { GameState, DisplayItem } from '../types/index.js';
+import { getItem } from '../types/items.js';
 
-type UseShopSetupStateArgs = {
+type UseShopSetupStateProps = {
     state: GameState;
     setState: React.Dispatch<React.SetStateAction<GameState>>;
     changeScene: (scene: GameState['scene']) => void;
     advanceTime: (minutes: number) => void;
 };
 
-export function useShopSetupState({ setState, changeScene, advanceTime }: UseShopSetupStateArgs) {
+export function useShopSetupState({ state: _state, setState, changeScene, advanceTime }: UseShopSetupStateProps) {
     // 商品を陳列に追加
     const addToDisplay = useCallback(
-        (inventoryIndex: number, price: number) => {
+        (stockIndex: number, price: number) => {
             setState(prev => {
-                const newInventory = [...prev.inventory];
-                const [inventoryItem] = newInventory.splice(inventoryIndex, 1);
+                const currentStock = [...prev.stock];
+                const stockItem = currentStock[stockIndex];
 
-                if (!inventoryItem) return prev;
+                if (!stockItem) return prev;
 
-                const displayItem: DisplayItem = {
-                    inventoryItem,
+                // 在庫から1個減らす
+                if (stockItem.quantity > 1) {
+                    currentStock[stockIndex] = {
+                        ...stockItem,
+                        quantity: stockItem.quantity - 1,
+                    };
+                } else {
+                    currentStock.splice(stockIndex, 1);
+                }
+
+                // 陳列に追加
+                // DisplayItem の stockItem は、陳列されているその1個（または複数）を表す
+                // 既存の DisplayItem とマージするロジックを入れると親切だが、
+                // ShopSetupScreen での選択とインデックス管理が複雑になるため、
+                // ここでは単純に新規追加とする（後で売却時に困らないようにする）
+
+                // ただし、ShopSetupScreen側で「同じ商品を複数回選んだ」場合に
+                // 別枠で表示されると見栄えが悪いかもしれない。
+                // とりあえず単純追加で実装し、表示側でまとめるか、
+                // ここでマージするか。
+                // DisplayItem { stockItem: { quantity: 1, ... } } として追加する。
+
+                const newItem: DisplayItem = {
+                    stockItem: {
+                        itemId: stockItem.itemId,
+                        quantity: 1,
+                        averagePurchasePrice: stockItem.averagePurchasePrice
+                    },
+                    originalCost: stockItem.averagePurchasePrice,
                     price,
                 };
 
+                const itemData = getItem(stockItem.itemId);
+
                 return {
                     ...prev,
-                    inventory: newInventory,
+                    stock: currentStock,
                     sellShop: {
                         ...prev.sellShop,
-                        displayItems: [...prev.sellShop.displayItems, displayItem],
-                        sellMessage: `${inventoryItem.item.name} を ${price}G で陳列しました！`,
+                        displayItems: [...prev.sellShop.displayItems, newItem],
+                        sellMessage: `${itemData.name} を ${price} G で 陳列しました`,
                     },
                 };
             });
@@ -37,41 +67,12 @@ export function useShopSetupState({ setState, changeScene, advanceTime }: UseSho
         [setState],
     );
 
-    // 陳列から削除
-    const removeFromDisplay = useCallback(
-        (displayIndex: number) => {
-            setState(prev => {
-                const newDisplayItems = [...prev.sellShop.displayItems];
-                const [removed] = newDisplayItems.splice(displayIndex, 1);
-
-                if (!removed) return prev;
-
-                const newInventory = [...prev.inventory, removed.inventoryItem];
-
-                return {
-                    ...prev,
-                    inventory: newInventory,
-                    sellShop: {
-                        ...prev.sellShop,
-                        displayItems: newDisplayItems,
-                        sellMessage: `${removed.inventoryItem.item.name} を陳列から外しました。`,
-                    },
-                };
-            });
-        },
-        [setState],
-    );
-
-    // 開店
     const openShop = useCallback(() => {
         // まず準備時間として1時間経過させる
         advanceTime(60);
 
-        // 時間経過後の状態に基づいて、開店可能か判断する
-        // setStateは関数型更新なので、直前のadvanceTime（の中のsetState）の結果を引き継ぐ
         setState(prev => {
             if (prev.hour >= 18) {
-                // 18時を過ぎてしまった場合は強制的にメニューへ
                 changeScene('menu');
                 return {
                     ...prev,
@@ -82,14 +83,17 @@ export function useShopSetupState({ setState, changeScene, advanceTime }: UseSho
                 };
             }
 
-            // 開店成功
             changeScene('sell_shop');
             return {
                 ...prev,
                 sellShop: {
                     ...prev.sellShop,
                     phase: 'selling',
-                    sellMessage: 'みせを ひらいた！',
+                    sellMessage: 'いらっしゃいませ！\n（お客さんが 来るのを 待っています…）',
+                    isWaiting: true,
+                    salesCount: 0,
+                    currentSales: 0,
+                    currentProfit: 0,
                 },
             };
         });
@@ -97,7 +101,6 @@ export function useShopSetupState({ setState, changeScene, advanceTime }: UseSho
 
     return {
         addToDisplay,
-        removeFromDisplay,
         openShop,
     };
 }

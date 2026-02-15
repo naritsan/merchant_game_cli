@@ -1,39 +1,72 @@
+export * from './items.js';
+import { ItemId, ItemData } from './items.js';
+
 // === アイテム ===
+// Legacy Item type alias for compatibility during refactor, or we can just use ItemData
+export type Item = ItemData;
 
-export type ItemType = 'weapon' | 'armor' | 'item';
-
-export type Item = {
-	name: string;
-	price: number;
-	type: ItemType;
-	attack?: number;
-	defense?: number;
-};
-
-// === 在庫アイテム ===
-
+// === 在庫アイテム (Legacy - to be removed/refactored) ===
+// Keeping for a moment if needed, but we are switching to StackableItem
 export type InventoryItem = {
 	item: Item;
-	purchasePrice: number; // 実際に仕入れた価格
+	purchasePrice: number;
+};
+
+// === 新しいインベントリシステム ===
+
+export type StackableItem = {
+	itemId: ItemId;
+	quantity: number;
+};
+
+export type StockItem = StackableItem & {
+	averagePurchasePrice: number;
+};
+
+export type TransactionType = 'buy' | 'sell';
+
+export type TransactionRecord = {
+	id: string;
+	date: { day: number, hour: number, minute: number };
+	type: TransactionType;
+	itemId: ItemId;
+	quantity: number;
+	price: number;
+	totalPrice: number;
+	partner: string;
 };
 
 // === 陳列商品 ===
 
 export type DisplayItem = {
-	inventoryItem: InventoryItem;
-	price: number; // 値札（商人が設定）
+	stockItem: StockItem; // Changed from InventoryItem
+	originalCost: number; // Cost basis for this specific display item (usually avg price)
+	price: number; // 値札
 };
 
 // === キャラクター ===
 
+export type Job = 'Warrior' | 'Mage' | 'Thief' | 'Cleric'; // Assuming Job type is needed for the new Character definition
+
 export type Character = {
 	name: string;
+	job: Job;
+	level: number;
+	exp: number;
+	nextExp: number;
 	hp: number;
 	maxHp: number;
 	mp: number;
 	maxMp: number;
-	weapon?: Item;
-	armor?: Item;
+	str: number;
+	vit: number;
+	int: number;
+	men: number;
+	agi: number;
+	dex: number;
+	luck: number;
+	weapon?: ItemId;
+	armor?: ItemId;
 };
 
 // === モンスター ===
@@ -42,29 +75,31 @@ export type Monster = {
 	name: string;
 	hp: number;
 	maxHp: number;
+	dropItem?: ItemId;
+	dropRate?: number;
 };
 
 // === 買い物客 ===
 
 export type Customer = {
 	name: string;
-	wantItem: Item;
-	maxBudget: number; // 出せる最高額
-	targetPrice: number; // その時の値札価格
-	maxNegotiations: number; // 交渉可能回数（1～3）
-	currentNegotiation: number; // 現在の交渉回数
-	offeredPrice?: number; // 客が提示した価格
+	wantItem: ItemId; // Changed to ItemId
+	maxBudget: number;
+	targetPrice: number;
+	maxNegotiations: number;
+	currentNegotiation: number;
+	offeredPrice?: number;
 	dialogue: string;
 };
 
-export const CUSTOMERS: Customer[] = [
-	{ name: 'まちのむすめ', wantItem: {} as Item, maxBudget: 0, targetPrice: 0, maxNegotiations: 0, currentNegotiation: 0, dialogue: '' },
-	{ name: 'たびのせんし', wantItem: {} as Item, maxBudget: 0, targetPrice: 0, maxNegotiations: 2, currentNegotiation: 0, dialogue: '' },
-	{ name: 'おかねもち', wantItem: {} as Item, maxBudget: 0, targetPrice: 0, maxNegotiations: 3, currentNegotiation: 0, dialogue: '' },
-	{ name: 'まほうつかい', wantItem: {} as Item, maxBudget: 0, targetPrice: 0, maxNegotiations: 2, currentNegotiation: 0, dialogue: '' },
-	{ name: 'ぼうけんしゃ', wantItem: {} as Item, maxBudget: 0, targetPrice: 0, maxNegotiations: 0, currentNegotiation: 0, dialogue: '' },
-	{ name: 'おじいさん', wantItem: {} as Item, maxBudget: 0, targetPrice: 0, maxNegotiations: 3, currentNegotiation: 0, dialogue: '' },
-	{ name: 'こどもの王子', wantItem: {} as Item, maxBudget: 0, targetPrice: 0, maxNegotiations: 2, currentNegotiation: 0, dialogue: '' },
+export const CUSTOMERS: Omit<Customer, 'wantItem' | 'maxBudget' | 'targetPrice' | 'currentNegotiation' | 'dialogue'>[] = [
+	{ name: 'まちのむすめ', maxNegotiations: 0 },
+	{ name: 'たびのせんし', maxNegotiations: 2 },
+	{ name: 'おかねもち', maxNegotiations: 3 },
+	{ name: 'まほうつかい', maxNegotiations: 2 },
+	{ name: 'ぼうけんしゃ', maxNegotiations: 0 },
+	{ name: 'おじいさん', maxNegotiations: 3 },
+	{ name: 'こどもの王子', maxNegotiations: 2 },
 ];
 
 // === 戦闘 ===
@@ -88,15 +123,7 @@ export const SHOP_COMMANDS: ShopCommand[] = [
 	'やめる',
 ];
 
-export const SHOP_ITEMS: Item[] = [
-	{ name: 'どうのつるぎ', price: 100, type: 'weapon', attack: 5 },
-	{ name: 'てつのつるぎ', price: 500, type: 'weapon', attack: 15 },
-	{ name: 'はがねのつるぎ', price: 1500, type: 'weapon', attack: 30 },
-	{ name: 'かわのたて', price: 80, type: 'armor', defense: 3 },
-	{ name: 'てつのたて', price: 300, type: 'armor', defense: 10 },
-	{ name: 'ぬののふく', price: 50, type: 'armor', defense: 2 },
-	{ name: 'くさりかたびら', price: 800, type: 'armor', defense: 18 },
-];
+// SHOP_ITEMS removed, utilize getAllItems() or filtered list from items.ts
 
 // === 販売シーン ===
 
@@ -127,14 +154,15 @@ export type SellShopState = {
 
 // === 画面遷移 ===
 
-export type Scene = 'menu' | 'battle' | 'shop' | 'shop_setup' | 'sell_shop' | 'inventory' | 'calendar' | 'fortune' | 'tips';
+export type Scene = 'menu' | 'battle' | 'shop' | 'shop_setup' | 'sell_shop' | 'inventory' | 'calendar' | 'fortune' | 'tips' | 'ledger' | 'stock_list';
 
-export type MenuCommand = 'しいれ' | 'みせをひらく' | 'うらない' | 'カレンダー' | 'もちもの' | 'Tips' | 'やすむ' | 'おわる';
+export type MenuCommand = 'しいれ' | 'みせをひらく' | 'うらない' | 'ちょうぼ' | 'カレンダー' | 'もちもの' | 'Tips' | 'やすむ' | 'おわる';
 
 export const MENU_COMMANDS: MenuCommand[] = [
 	'みせをひらく',
 	'しいれ',
 	'うらない',
+	'ちょうぼ',
 	'カレンダー',
 	'もちもの',
 	'Tips',
@@ -162,7 +190,10 @@ export type GameState = {
 	messages: string[];
 	selectedCommand: number;
 	gold: number;
-	inventory: InventoryItem[];
+	// inventory: InventoryItem[]; // Removed
+	possessions: StackableItem[];
+	stock: StockItem[];
+	transactions: TransactionRecord[];
 	shop: ShopState;
 	sellShop: SellShopState;
 	day: number;

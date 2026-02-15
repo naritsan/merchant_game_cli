@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import BorderBox from './BorderBox.js';
-import ItemList from './ItemList.js';
-import { type GameState } from '../types/index.js';
+import { GameState } from '../types/index.js';
+import { getItem } from '../types/items.js';
 
 type Props = {
     state: GameState;
@@ -11,60 +11,102 @@ type Props = {
 
 export default function InventoryScreen({ state, changeScene }: Props) {
     const [selectedIndex, setSelectedIndex] = useState(0);
-    const { inventory, gold } = state;
+    const { possessions } = state;
 
     useInput((_input, key) => {
-        if (key.upArrow) {
-            setSelectedIndex(prev => Math.max(0, prev - 1));
-        } else if (key.downArrow) {
-            setSelectedIndex(prev => Math.min(inventory.length - 1, prev + 1));
-        } else if (key.escape || key.return) {
+        if (key.upArrow && possessions.length > 0) {
+            setSelectedIndex(prev => (prev > 0 ? prev - 1 : possessions.length - 1));
+        }
+        if (key.downArrow && possessions.length > 0) {
+            setSelectedIndex(prev => (prev < possessions.length - 1 ? prev + 1 : 0));
+        }
+        if (key.escape) {
             changeScene('menu');
         }
     });
 
-    const items = inventory.map(inv => inv.item);
+    const selectedItem = possessions[selectedIndex];
+    const itemData = selectedItem ? getItem(selectedItem.itemId) : null;
+
+    // スクロール表示用
+    const MAX_VISIBLE_ITEMS = 8;
+    let start = 0;
+    let end = possessions.length;
+
+    if (possessions.length > MAX_VISIBLE_ITEMS) {
+        const half = Math.floor(MAX_VISIBLE_ITEMS / 2);
+        start = Math.max(0, selectedIndex - half);
+        end = start + MAX_VISIBLE_ITEMS;
+        if (end > possessions.length) {
+            end = possessions.length;
+            start = Math.max(0, end - MAX_VISIBLE_ITEMS);
+        }
+    }
+    const visibleItems = possessions.slice(start, end);
 
     return (
         <Box flexDirection="column" width={60}>
-            {/* Title */}
             <Box justifyContent="center">
                 <Text bold color="cyan">
                     🎒 もちもの 🎒
                 </Text>
             </Box>
 
-            {/* Inventory List */}
-            <BorderBox>
-                <Box flexDirection="column" minHeight={10}>
-                    <ItemList
-                        items={items}
-                        selectedIndex={selectedIndex}
-                        showPrice={true}
-                        renderItem={(item) => (
-                            <Box flexDirection="row" justifyContent="space-between" width={40}>
-                                <Text>{item.name}</Text>
-                                <Text>
-                                    <Text dimColor>定価 </Text>
-                                    {item.price} G
-                                </Text>
+            <Box flexDirection="row" justifyContent="space-between" marginY={1}>
+                {/* Item List */}
+                <BorderBox width={35}>
+                    <Box flexDirection="column">
+                        <Text bold>アイテムリスト</Text>
+                        <Text> </Text>
+                        {possessions.length === 0 ? (
+                            <Text dimColor>なにも もっていません</Text>
+                        ) : (
+                            <Box flexDirection="column">
+                                {start > 0 && <Text dimColor>  ...</Text>}
+                                {visibleItems.map((item, i) => {
+                                    const index = start + i;
+                                    const isSelected = index === selectedIndex;
+                                    const iData = getItem(item.itemId);
+                                    return (
+                                        <Text key={index} color={isSelected ? 'yellow' : undefined}>
+                                            {isSelected ? '▶' : ' '} {iData.name} x{item.quantity}
+                                        </Text>
+                                    );
+                                })}
+                                {end < possessions.length && <Text dimColor>  ...</Text>}
                             </Box>
                         )}
-                    />
-                </Box>
-            </BorderBox>
+                    </Box>
+                </BorderBox>
 
-            {/* Info Panel */}
-            <BorderBox>
-                <Box justifyContent="space-between" paddingX={1}>
-                    <Text>所持金: <Text color="yellow">{gold} G</Text></Text>
-                    <Text>アイテム数: {inventory.length} 個</Text>
-                </Box>
-            </BorderBox>
+                {/* Details */}
+                <BorderBox width={23}>
+                    <Box flexDirection="column">
+                        <Text bold>詳細</Text>
+                        <Text> </Text>
+                        {itemData ? (
+                            <Box flexDirection="column">
+                                <Text color="green">{itemData.name}</Text>
+                                <Text>タイプ: {itemData.type}</Text>
+                                <Text>価値: {itemData.price} G</Text>
+                                {itemData.attack !== undefined && (
+                                    <Text>攻撃力: {itemData.attack}</Text>
+                                )}
+                                {itemData.defense !== undefined && (
+                                    <Text>防御力: {itemData.defense}</Text>
+                                )}
+                                <Text> </Text>
+                                <Text dimColor>{itemData.description}</Text>
+                            </Box>
+                        ) : (
+                            <Text dimColor>選択してください</Text>
+                        )}
+                    </Box>
+                </BorderBox>
+            </Box>
 
-            {/* Help */}
             <Box justifyContent="center" marginTop={1}>
-                <Text dimColor>↑↓: 選択  Esc/Enter: もどる</Text>
+                <Text dimColor>Esc: もどる</Text>
             </Box>
         </Box>
     );

@@ -5,7 +5,26 @@ import { getGameDate, GAME_START_DAY_OFFSET } from '../utils/time.js';
 const initialState: GameState = {
     scene: 'menu',
     party: [
-        { name: '商人', hp: 100, maxHp: 100, mp: 20, maxMp: 20, weapon: undefined, armor: undefined },
+        {
+            name: 'Merchant',
+            job: 'Warrior',
+            level: 1,
+            exp: 0,
+            nextExp: 100,
+            hp: 20,
+            maxHp: 20,
+            mp: 0,
+            maxMp: 0,
+            str: 10,
+            vit: 10,
+            int: 5,
+            men: 5,
+            agi: 5,
+            dex: 5,
+            luck: 5,
+            weapon: undefined,
+            armor: undefined,
+        },
     ],
     monster: {
         name: 'ドラゴン',
@@ -17,7 +36,10 @@ const initialState: GameState = {
     ],
     selectedCommand: 0,
     gold: 3000,
-    inventory: [],
+    // inventory: [], // Removed
+    possessions: [],
+    stock: [],
+    transactions: [],
     shop: {
         shopMessage: 'いらっしゃい！ なにを おもとめですか？',
         selectedMenuItem: 0,

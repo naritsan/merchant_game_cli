@@ -7,10 +7,10 @@ import ShopInfo from './ShopInfo.js';
 import {
     type GameState,
     SHOP_COMMANDS,
-    SHOP_ITEMS,
 } from '../types/index.js';
 import { useShopState } from '../hooks/useShopState.js';
 import { getPurchaseCostMultiplier } from '../utils/luckUtils.js';
+import { getItem, getAllItems } from '../types/items.js';
 
 type Props = {
     state: GameState;
@@ -46,10 +46,14 @@ export default function ShopScreen({ state, setState, changeScene, advanceTime }
     });
 
     // 売る画面では所持品の半額を表示
-    const sellItems = state.inventory.map(invItem => ({
-        ...invItem.item,
-        price: Math.floor(invItem.item.price / 2),
-    }));
+    const sellItems = state.possessions.map(p => {
+        const itemData = getItem(p.itemId);
+        return {
+            ...itemData,
+            price: Math.floor(itemData.price / 2),
+            name: `${itemData.name} x${p.quantity}`,
+        };
+    });
 
     return (
         <Box flexDirection="column" width={60}>
@@ -73,7 +77,7 @@ export default function ShopScreen({ state, setState, changeScene, advanceTime }
                             <Box flexDirection="column" width="55%">
                                 <Text bold underline>商品リスト (卸値)</Text>
                                 <ItemList
-                                    items={SHOP_ITEMS}
+                                    items={getAllItems()}
                                     selectedIndex={shop.selectedItemIndex}
                                     renderItem={(item) => {
                                         const price = Math.floor(item.price * 0.9 * getPurchaseCostMultiplier(state.luck));
@@ -83,14 +87,17 @@ export default function ShopScreen({ state, setState, changeScene, advanceTime }
                             </Box>
                             <Box flexDirection="column" width="45%" paddingLeft={1}>
                                 <Text bold underline>もちもの</Text>
-                                {state.inventory.length === 0 ? (
+                                {state.possessions.length === 0 ? (
                                     <Text dimColor>なし</Text>
                                 ) : (
-                                    state.inventory.map((inv, i) => (
-                                        <Text key={i} dimColor>
-                                            {inv.item.name}
-                                        </Text>
-                                    ))
+                                    state.possessions.map((p, i) => {
+                                        const itemData = getItem(p.itemId);
+                                        return (
+                                            <Text key={i} dimColor>
+                                                {itemData.name} x{p.quantity}
+                                            </Text>
+                                        );
+                                    })
                                 )}
                             </Box>
                         </Box>
@@ -118,7 +125,7 @@ export default function ShopScreen({ state, setState, changeScene, advanceTime }
                     )}
                 </BorderBox>
                 <BorderBox flexGrow={1}>
-                    <ShopInfo gold={state.gold} party={state.party} />
+                    <ShopInfo gold={state.gold} possessions={state.possessions} party={state.party} />
                 </BorderBox>
             </Box>
 

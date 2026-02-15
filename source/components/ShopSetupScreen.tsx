@@ -4,6 +4,7 @@ import BorderBox from './BorderBox.js';
 import { type GameState } from '../types/index.js';
 import { useShopSetupState } from '../hooks/useShopSetupState.js';
 import { useAcceleratedValue } from '../hooks/useAcceleratedValue.js';
+import { getItem } from '../types/items.js';
 
 type Props = {
     state: GameState;
@@ -13,7 +14,7 @@ type Props = {
 };
 
 export default function ShopSetupScreen({ state, setState, changeScene, advanceTime }: Props) {
-    const [selectedInventoryIndex, setSelectedInventoryIndex] = useState(0);
+    const [selectedStockIndex, setSelectedStockIndex] = useState(0);
     // 価格設定（加速ロジック付き）
     const { value: price, setValue: setPrice, change: changePrice } = useAcceleratedValue(100, 0, 999999);
     const [mode, setMode] = useState<'select' | 'price'>('select');
@@ -25,20 +26,23 @@ export default function ShopSetupScreen({ state, setState, changeScene, advanceT
         advanceTime,
     });
 
+    const stockList = state.stock;
+
     useInput((_input, key) => {
         if (mode === 'select') {
-            if (key.upArrow && state.inventory.length > 0) {
-                setSelectedInventoryIndex(prev =>
-                    prev > 0 ? prev - 1 : state.inventory.length - 1,
+            if (key.upArrow && stockList.length > 0) {
+                setSelectedStockIndex(prev =>
+                    prev > 0 ? prev - 1 : stockList.length - 1,
                 );
-            } else if (key.downArrow && state.inventory.length > 0) {
-                setSelectedInventoryIndex(prev =>
-                    prev < state.inventory.length - 1 ? prev + 1 : 0,
+            } else if (key.downArrow && stockList.length > 0) {
+                setSelectedStockIndex(prev =>
+                    prev < stockList.length - 1 ? prev + 1 : 0,
                 );
-            } else if (key.return && state.inventory.length > 0) {
-                const item = state.inventory[selectedInventoryIndex];
+            } else if (key.return && stockList.length > 0) {
+                const item = stockList[selectedStockIndex];
                 if (item) {
-                    setPrice(item.item.price);
+                    const itemData = getItem(item.itemId);
+                    setPrice(itemData.price);
                     setMode('price');
                 }
             } else if (key.escape) {
@@ -54,8 +58,10 @@ export default function ShopSetupScreen({ state, setState, changeScene, advanceT
             } else if (key.rightArrow) {
                 changePrice(100);
             } else if (key.return) {
-                addToDisplay(selectedInventoryIndex, price);
+                addToDisplay(selectedStockIndex, price);
                 setMode('select');
+                // リストが減るのでインデックスを調整
+                setSelectedStockIndex(prev => Math.max(0, prev - 1));
             } else if (key.escape) {
                 setMode('select');
             }
@@ -68,23 +74,23 @@ export default function ShopSetupScreen({ state, setState, changeScene, advanceT
         }
     });
 
-    const selectedItem = state.inventory[selectedInventoryIndex];
+    const selectedItem = stockList[selectedStockIndex];
 
     // 在庫リストのスクロール計算
     const MAX_VISIBLE_INVENTORY = 5;
     let invStart = 0;
-    let invEnd = state.inventory.length;
+    let invEnd = stockList.length;
 
-    if (state.inventory.length > MAX_VISIBLE_INVENTORY) {
+    if (stockList.length > MAX_VISIBLE_INVENTORY) {
         const half = Math.floor(MAX_VISIBLE_INVENTORY / 2);
-        invStart = Math.max(0, selectedInventoryIndex - half);
+        invStart = Math.max(0, selectedStockIndex - half);
         invEnd = invStart + MAX_VISIBLE_INVENTORY;
-        if (invEnd > state.inventory.length) {
-            invEnd = state.inventory.length;
+        if (invEnd > stockList.length) {
+            invEnd = stockList.length;
             invStart = Math.max(0, invEnd - MAX_VISIBLE_INVENTORY);
         }
     }
-    const visibleInventory = state.inventory.slice(invStart, invEnd);
+    const visibleStock = stockList.slice(invStart, invEnd);
 
     return (
         <Box flexDirection="column" width={60}>
@@ -96,23 +102,24 @@ export default function ShopSetupScreen({ state, setState, changeScene, advanceT
 
             <BorderBox>
                 <Box flexDirection="column">
-                    <Text bold>在庫リスト</Text>
+                    <Text bold>在庫リスト (Stock)</Text>
                     <Text> </Text>
-                    {state.inventory.length === 0 ? (
+                    {stockList.length === 0 ? (
                         <Text dimColor>在庫がありません</Text>
                     ) : (
                         <Box flexDirection="column">
                             {invStart > 0 && <Text dimColor>  ...</Text>}
-                            {visibleInventory.map((invItem, i) => {
+                            {visibleStock.map((stockItem, i) => {
                                 const index = invStart + i;
-                                const isSelected = mode === 'select' && index === selectedInventoryIndex;
+                                const isSelected = mode === 'select' && index === selectedStockIndex;
+                                const itemData = getItem(stockItem.itemId);
                                 return (
                                     <Text key={index} color={isSelected ? 'yellow' : undefined}>
-                                        {isSelected ? '▶' : ' '} {invItem.item.name} ({invItem.purchasePrice}G)
+                                        {isSelected ? '▶' : ' '} {itemData.name} x{stockItem.quantity} (Avg: {Math.round(stockItem.averagePurchasePrice)}G)
                                     </Text>
                                 );
                             })}
-                            {invEnd < state.inventory.length && <Text dimColor>  ...</Text>}
+                            {invEnd < stockList.length && <Text dimColor>  ...</Text>}
                         </Box>
                     )}
                 </Box>
@@ -123,7 +130,7 @@ export default function ShopSetupScreen({ state, setState, changeScene, advanceT
                     <Box flexDirection="column">
                         <Text bold>価格設定</Text>
                         <Text>
-                            {selectedItem.item.name}
+                            {getItem(selectedItem.itemId).name}
                         </Text>
                         <Text>
                             値札: <Text color="yellow">{price} G</Text>
@@ -140,11 +147,14 @@ export default function ShopSetupScreen({ state, setState, changeScene, advanceT
                         <Text dimColor>まだ商品がありません</Text>
                     ) : (
                         // 最新の追加が見えるように末尾を表示
-                        state.sellShop.displayItems.slice(-8).map((item, index) => (
-                            <Text key={index}>
-                                {item.inventoryItem.item.name} {item.price}G
-                            </Text>
-                        ))
+                        state.sellShop.displayItems.slice(-8).map((displayItem, index) => {
+                            const itemData = getItem(displayItem.stockItem.itemId);
+                            return (
+                                <Text key={index}>
+                                    {itemData.name} {displayItem.price}G
+                                </Text>
+                            );
+                        })
                     )}
                 </Box>
             </BorderBox>

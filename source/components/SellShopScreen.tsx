@@ -8,6 +8,7 @@ import {
 } from '../types/index.js';
 import { useSellShopState } from '../hooks/useSellShopState.js';
 import { useAcceleratedValue } from '../hooks/useAcceleratedValue.js';
+import { getItem } from '../types/items.js';
 
 type Props = {
     state: GameState;
@@ -92,7 +93,12 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
     });
 
     const { customer } = sellShop;
-    const merchant = state.party[0]!;
+    const merchant = state.party[0];
+    // merchant is possibly undefined if party is empty, though unlikely in this game logic.
+    // Adding a fallback to avoid crash if party is somehow empty.
+    const merchantName = merchant ? merchant.name : 'Merchant';
+    const merchantHp = merchant ? merchant.hp : 0;
+    const merchantMaxHp = merchant ? merchant.maxHp : 0;
 
     // 陳列リストのスクロール表示用
     const VISIBLE_ITEMS = 10;
@@ -113,7 +119,7 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
             {/* Title */}
             <Box justifyContent="center">
                 <Text bold color="magenta">
-                    🏪 {merchant.name}のみせ 🏪
+                    🏪 {merchantName}のみせ 🏪
                 </Text>
             </Box>
 
@@ -127,8 +133,8 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                                 <>
                                     <Text bold>{customer.name}</Text>
                                     <Text> </Text>
-                                    <Text>希望: {customer.wantItem.name}</Text>
-                                    <Text dimColor>定価: {customer.wantItem.price} G</Text>
+                                    <Text>希望: {getItem(customer.wantItem).name}</Text>
+                                    <Text dimColor>定価: {getItem(customer.wantItem).price} G</Text>
                                     {state.showCustomerBudget && (
                                         <Text dimColor>(予算: {customer.maxBudget} G)</Text>
                                     )}
@@ -162,7 +168,7 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                             <Text dimColor>売切</Text>
                         ) : (
                             displayItemsSlice.map((item, i) => {
-                                const name = item.inventoryItem.item.name.slice(0, 12);
+                                const name = getItem(item.stockItem.itemId).name.slice(0, 12); // Updated to use getItem
                                 const priceStr = `${item.price} G`;
                                 // 枠線とパディングを除いた有効幅は約26文字
                                 return (
@@ -216,7 +222,7 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                 <BorderBox width={30}>
                     <Box flexDirection="column" paddingX={1}>
                         <Text>
-                            {merchant.name} HP {merchant.hp}/{merchant.maxHp}
+                            {merchantName} HP {merchantHp}/{merchantMaxHp}
                         </Text>
                         <Text>
                             所持金: <Text color="yellow">{state.gold} G</Text>

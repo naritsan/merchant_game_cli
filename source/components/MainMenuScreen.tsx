@@ -16,7 +16,7 @@ type MenuMode = 'main' | 'submenu' | 'rest' | 'confirm' | 'debug_menu' | 'debug_
 
 const CATEGORIES = [
     { id: 'action', label: 'こうどう', commands: ['みせをひらく', 'しいれ', 'うらない'] },
-    { id: 'system', label: 'システム', commands: ['もちもの', 'カレンダー', 'Tips'] },
+    { id: 'system', label: 'システム', commands: ['もちもの', 'ちょうぼ', 'カレンダー', 'Tips'] },
     { id: 'debug', label: 'デバッグ', commands: ['日付変更', '時間変更', '運勢変更', '天気変更', '所持金変更', '客予算表示切替'] },
 ] as const;
 
