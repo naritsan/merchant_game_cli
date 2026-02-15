@@ -56,7 +56,7 @@ export const getSeasonColor = (season: Season): string => {
         case 'Spring': return '#FF66CC'; // ピンク
         case 'Summer': return '#FF8080'; // 薄い赤（珊瑚色）
         case 'Autumn': return '#FFCC66'; // 薄いオレンジ（杏色）
-        case 'Winter': return 'blue';
+        case 'Winter': return 'white';   // 白
     }
 };
 
