@@ -66,14 +66,10 @@ export default function ShopSetupScreen({ state, setState, changeScene, advanceT
             }
         } else if (mode === 'quantity') {
             const item = stockList[selectedStockIndex]!;
-            if (key.upArrow) changeQuantity(1);
-            if (key.downArrow) changeQuantity(-1);
-            if (key.leftArrow) changeQuantity(-10);
-            if (key.rightArrow) changeQuantity(10);
-
-            // 範囲制限は useAcceleratedValue でやっているが、
-            // 在庫数を超えないように再調整が必要ならここでする
-            if (quantity > item.quantity) setQuantity(item.quantity);
+            if (key.upArrow) changeQuantity(1, 1, item.quantity);
+            if (key.downArrow) changeQuantity(-1, 1, item.quantity);
+            if (key.leftArrow) changeQuantity(-10, 1, item.quantity);
+            if (key.rightArrow) changeQuantity(10, 1, item.quantity);
 
             if (key.return) {
                 addToDisplay(selectedStockIndex, price, quantity);

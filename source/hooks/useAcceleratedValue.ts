@@ -11,7 +11,7 @@ export function useAcceleratedValue(initialValue: number, min: number = 0, max: 
     const lastChangeTime = useRef<number>(0);
     const consecutiveCount = useRef<number>(0);
 
-    const change = useCallback((amount: number) => {
+    const change = useCallback((amount: number, overrideMin?: number, overrideMax?: number) => {
         const now = Date.now();
         // 200ms以内の連打なら連続とみなす
         if (now - lastChangeTime.current < 200) {
@@ -33,11 +33,13 @@ export function useAcceleratedValue(initialValue: number, min: number = 0, max: 
         }
 
         const step = amount * multiplier;
+        const actualMin = overrideMin !== undefined ? overrideMin : min;
+        const actualMax = overrideMax !== undefined ? overrideMax : max;
 
         setValue(prev => {
             const next = prev + step;
-            if (next < min) return min;
-            if (next > max) return max;
+            if (next < actualMin) return actualMin;
+            if (next > actualMax) return actualMax;
             return next;
         });
     }, [min, max]);
