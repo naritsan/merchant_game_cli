@@ -173,11 +173,11 @@ export default function LedgerScreen({ state, changeScene }: Props) {
                 const salesY = Math.floor(((d.totalSales - minVal) / range) * (height - 1));
                 const profitY = Math.floor(((d.profit - minVal) / range) * (height - 1));
 
-                if (i === salesY && i === profitY) return <Text color="yellow">X</Text>; // Overlap
-                if (i === salesY) return <Text color="cyan">S</Text>;
-                if (i === profitY) return <Text color="green">P</Text>;
-                if (Math.abs(yVal - 0) < range / height / 2) return <Text dimColor>-</Text>; // Zero line
-                return <Text dimColor>·</Text>;
+                if (i === salesY && i === profitY) return <Text key={d.day} color="yellow">X</Text>; // Overlap
+                if (i === salesY) return <Text key={d.day} color="cyan">S</Text>;
+                if (i === profitY) return <Text key={d.day} color="green">P</Text>;
+                if (Math.abs(yVal - 0) < range / height / 2) return <Text key={d.day} dimColor>-</Text>; // Zero line
+                return <Text key={d.day} dimColor>·</Text>;
             });
 
             rows.push(
