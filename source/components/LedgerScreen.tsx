@@ -199,14 +199,13 @@ export default function LedgerScreen({ state, changeScene }: Props) {
                                     <Box width={6}><Text>{d.day}日</Text></Box>
                                     <Box width={9} justifyContent="flex-end"><Text>{d.totalSales}G</Text></Box>
                                     <Box width={9} justifyContent="flex-end"><Text color={profitColor}>{d.profit}G</Text></Box>
-                                    {/* Sales Gauge */}
                                     <Box width={BAR_WIDTH + 2} paddingLeft={1}>
                                         <Text color="cyan">{salesBar}</Text>
                                         <Text dimColor>{salesEmpty}</Text>
                                     </Box>
                                 </Box>
                                 <Box flexDirection="row">
-                                    <Box width={24}><Text> </Text></Box> {/* Spacer for Day/Sales/Profit columns */}
+                                    <Box width={24}><Text>{' '}</Text></Box>
                                     <Box width={BAR_WIDTH + 2} paddingLeft={1}>
                                         <Text color={profitColor}>{profitBar}</Text>
                                         <Text dimColor>{profitEmpty}</Text>
