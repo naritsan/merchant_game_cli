@@ -21,12 +21,12 @@ const CATEGORIES = [
 ] as const;
 
 const LUCK_LABELS: Record<string, string> = {
-    'Divine': '神の加護', 'Miracle': '奇跡', 'Blessing': '祝福', 'Fortune': '幸運',
-    'Normal': '平穏', 'BadOmen': '不吉', 'Curse': '呪い', 'Doom': '破滅', 'Apocalypse': '黙示録'
+    'Divine': '神の加護', 'Miracle': '星の導き', 'Blessing': '女神の祝福', 'Fortune': '幸運',
+    'Normal': '平穏', 'BadOmen': '不吉な予感', 'Curse': '呪い', 'Doom': '破滅の兆し', 'Apocalypse': '黙示録'
 };
 
 const WEATHER_LABELS: Record<string, string> = {
-    'sunny': '晴れ', 'rainy': '雨', 'snowy': '雪', 'storm': '嵐', 'aurora': 'オーロラ'
+    'sunny': '快晴', 'rainy': '雨', 'snowy': '雪', 'storm': '嵐', 'aurora': 'オーロラ'
 };
 
 export default function MainMenuScreen({ state, setState, changeScene, sleep, advanceTime }: Props) {
