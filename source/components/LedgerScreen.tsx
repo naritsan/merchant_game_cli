@@ -208,7 +208,7 @@ export default function LedgerScreen({ state, changeScene }: Props) {
                 const isSales = i < salesHeight;
 
                 if (isProfit && d.profit > 0) return <Text key={d.day} color="green">█</Text>;
-                if (isSales) return <Text key={d.day} color="cyan">░</Text>; // Cost portion
+                if (isSales) return <Text key={d.day} color="cyan">█</Text>; // Cost portion (Solid)
                 if (d.profit < 0 && i === 0) return <Text key={d.day} color="red">█</Text>; // Indicate loss at bottom row
                 return <Text key={d.day} dimColor>·</Text>;
             });
@@ -251,7 +251,7 @@ export default function LedgerScreen({ state, changeScene }: Props) {
                 {/* Legend */}
                 <Box marginTop={1} marginLeft={4} flexDirection="row" gap={2}>
                     <Text color="green">█ 利益 (Profit)</Text>
-                    <Text color="cyan">░ 原価 (Cost)</Text>
+                    <Text color="cyan">█ 原価 (Cost)</Text>
                     <Text dimColor>全高 = 売上 (Sales)</Text>
                 </Box>
             </Box>
