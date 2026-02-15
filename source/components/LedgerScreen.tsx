@@ -12,10 +12,13 @@ type Props = {
 };
 
 type Tab = 'history' | 'analysis' | 'dashboard';
+type DashboardMode = 'menu' | 'graph' | 'metrics';
 
 export default function LedgerScreen({ state, changeScene }: Props) {
     const [activeTab, setActiveTab] = useState<Tab>('history');
     const [scrollIndex, setScrollIndex] = useState(0);
+    const [dashboardMode, setDashboardMode] = useState<DashboardMode>('menu');
+    const [dashboardMenuIndex, setDashboardMenuIndex] = useState(0);
 
     // Data aggregation
     const reversedTransactions = useMemo(() => [...state.transactions].reverse(), [state.transactions]);
@@ -25,36 +28,53 @@ export default function LedgerScreen({ state, changeScene }: Props) {
     const VISIBLE_ROWS = 10;
 
     useInput((_input, key) => {
-        if (key.escape || (key.ctrl && _input === 'c')) {
-            changeScene('menu');
-            return;
-        }
-
-        if (key.leftArrow) {
-            if (activeTab === 'analysis') setActiveTab('history');
-            else if (activeTab === 'dashboard') setActiveTab('analysis');
-            setScrollIndex(0);
-        } else if (key.rightArrow) {
+        // Global Navigation
+        if (key.rightArrow && (activeTab !== 'dashboard' || dashboardMode === 'menu')) {
             if (activeTab === 'history') setActiveTab('analysis');
             else if (activeTab === 'analysis') setActiveTab('dashboard');
             setScrollIndex(0);
+            return;
+        }
+        if (key.leftArrow && (activeTab !== 'dashboard' || dashboardMode === 'menu')) {
+            if (activeTab === 'analysis') setActiveTab('history');
+            else if (activeTab === 'dashboard') setActiveTab('analysis');
+            setScrollIndex(0);
+            return;
         }
 
-        if (key.upArrow) {
-            if (activeTab === 'dashboard') {
-                // Dashboard side scrolling (shift days)
-                setScrollIndex(prev => Math.max(0, prev - 1));
+        if (key.escape || (key.ctrl && _input === 'c')) {
+            if (activeTab === 'dashboard' && dashboardMode !== 'menu') {
+                setDashboardMode('menu');
             } else {
-                setScrollIndex(prev => Math.max(0, prev - 1));
+                changeScene('menu');
             }
-        } else if (key.downArrow) {
-            const maxRows =
-                activeTab === 'history' ? reversedTransactions.length :
-                    activeTab === 'analysis' ? itemAnalysis.length :
-                        activeTab === 'dashboard' ? Math.max(0, dailyAnalysis.length - 30) : 0; // Approx visible width
+            return;
+        }
 
-            // standard scrolling
-            setScrollIndex(prev => Math.min(Math.max(0, maxRows - VISIBLE_ROWS), prev + 1));
+        // Tab Specific Navigation
+        if (activeTab === 'dashboard') {
+            if (dashboardMode === 'menu') {
+                if (key.upArrow) setDashboardMenuIndex(prev => Math.max(0, prev - 1));
+                if (key.downArrow) setDashboardMenuIndex(prev => Math.min(1, prev + 1));
+                if (key.return) {
+                    if (dashboardMenuIndex === 0) setDashboardMode('graph');
+                    if (dashboardMenuIndex === 1) setDashboardMode('metrics');
+                }
+            } else if (dashboardMode === 'graph') {
+                if (key.upArrow) setScrollIndex(prev => Math.max(0, prev - 1)); // Scroll back in time (days)
+                if (key.downArrow) setScrollIndex(prev => Math.max(0, prev + 1)); // Scroll forward
+            }
+            // Metrics mode has no scroll currently
+        } else {
+            // History & Analysis Scrolling
+            if (key.upArrow) {
+                setScrollIndex(prev => Math.max(0, prev - 1));
+            } else if (key.downArrow) {
+                const maxRows =
+                    activeTab === 'history' ? reversedTransactions.length :
+                        activeTab === 'analysis' ? itemAnalysis.length : 0;
+                setScrollIndex(prev => Math.min(Math.max(0, maxRows - VISIBLE_ROWS), prev + 1));
+            }
         }
     });
 
@@ -142,25 +162,29 @@ export default function LedgerScreen({ state, changeScene }: Props) {
         );
     };
 
-    const renderDashboard = () => {
-        // Vertical Stacked Bar Chart
+    const renderDashboardMenu = () => {
+        return (
+            <Box flexDirection="column" flexGrow={1} justifyContent="center" alignItems="center">
+                <Box flexDirection="column" borderStyle="round" borderColor="white" paddingX={2} paddingY={1}>
+                    <Box marginBottom={1}><Text bold>ダッシュボード メニュー</Text></Box>
+                    <Box>
+                        <Text color={dashboardMenuIndex === 0 ? "green" : "white"}>
+                            {dashboardMenuIndex === 0 ? "▶ " : "  "}📊 売上推移グラフ
+                        </Text>
+                    </Box>
+                    <Box>
+                        <Text color={dashboardMenuIndex === 1 ? "green" : "white"}>
+                            {dashboardMenuIndex === 1 ? "▶ " : "  "}🔢 経営指標 (Metrics)
+                        </Text>
+                    </Box>
+                </Box>
+            </Box>
+        );
+    };
+
+    const renderSalesGraph = () => {
         const CHART_HEIGHT = 10;
-        const CHART_WIDTH_DAYS = 30; // Max days to show on screen
-
-        // Prepare data: last N days, or respecting scroll?
-        // Let's just show the last N days for simplicity in "Dashboard" mode, or use scroll to shift the window.
-        // Assuming dailyAnalysis is sorted by day ascending.
-
-        // Use scrollIndex to window the data if we have many days
-        // scrollIndex 0 = show latest? or show from day 1?
-        // Usually dashboards show latest data by default.
-        // Let's make it so it shows the *latest* days, and scrolling moves back in time?
-        // Or standard: scrollIndex determines *start* index.
-        // Let's start with showing the LATEST data (end of array) by default.
-        // But for consistency with other tabs, scrollIndex usually starts at 0 (top/start).
-        // Let's stick to simple slicing: standard list logic? 
-        // No, user wants X-axis date.
-        // Let's slice based on scrollIndex, up to CHART_WIDTH_DAYS.
+        const CHART_WIDTH_DAYS = 30;
 
         const startIndex = Math.max(0, dailyAnalysis.length - CHART_WIDTH_DAYS - scrollIndex);
         const endIndex = Math.min(dailyAnalysis.length, startIndex + CHART_WIDTH_DAYS);
@@ -170,7 +194,6 @@ export default function LedgerScreen({ state, changeScene }: Props) {
             return <Box flexGrow={1} alignItems="center" justifyContent="center"><Text dimColor>データなし</Text></Box>;
         }
 
-        // Auto Scale Logic
         const maxValRaw = Math.max(1, ...visibleData.map(d => Math.max(d.totalSales, d.profit)));
         const getNiceMax = (num: number) => {
             if (num <= 0) return 100;
@@ -188,28 +211,21 @@ export default function LedgerScreen({ state, changeScene }: Props) {
 
         const rows: React.ReactNode[] = [];
 
-        // Build Rows (Top to Bottom)
         for (let i = CHART_HEIGHT - 1; i >= 0; i--) {
-
             const yLabel = i === CHART_HEIGHT - 1 ? maxVal.toString() :
                 i === 0 ? "0" :
                     i === Math.floor(CHART_HEIGHT / 2) ? Math.floor(maxVal / 2).toString() : "";
 
             const rowCells = visibleData.map(d => {
                 const salesHeight = (d.totalSales / maxVal) * CHART_HEIGHT;
-                const profitHeight = (d.profit / maxVal) * CHART_HEIGHT; // Profit could be negative?
-
-                // Simplified: assuming positive profit for stacking visualization
-                // If negative profit, maybe show red block at bottom?
-                // Visualizing: Stacked [Profit][Cost] = Sales
-                // So Profit is at the bottom, Sales is Total Height.
+                const profitHeight = (d.profit / maxVal) * CHART_HEIGHT;
 
                 const isProfit = i < profitHeight;
                 const isSales = i < salesHeight;
 
                 if (isProfit && d.profit > 0) return <Text key={d.day} color="green">█</Text>;
-                if (isSales) return <Text key={d.day} color="cyan">█</Text>; // Cost portion (Solid)
-                if (d.profit < 0 && i === 0) return <Text key={d.day} color="red">█</Text>; // Indicate loss at bottom row
+                if (isSales) return <Text key={d.day} color="cyan">█</Text>; // Cost
+                if (d.profit < 0 && i === 0) return <Text key={d.day} color="red">█</Text>;
                 return <Text key={d.day} dimColor>·</Text>;
             });
 
@@ -225,9 +241,6 @@ export default function LedgerScreen({ state, changeScene }: Props) {
             );
         }
 
-        // X-Axis Labels (Day)
-        // Show every 2nd or 3rd day to save space if needed, or vertical? 
-        // Let's just show last digit for each column to align perfectly.
         const xLabels = visibleData.map(d => {
             const dayStr = d.day.toString();
             const label = dayStr.length > 1 ? dayStr.slice(-1) : dayStr;
@@ -236,27 +249,85 @@ export default function LedgerScreen({ state, changeScene }: Props) {
 
         return (
             <Box flexDirection="column" flexGrow={1} paddingLeft={1}>
-                {/* Chart Area */}
                 <Box flexDirection="column">
                     {rows}
                 </Box>
-                {/* X Axis Line */}
                 <Box flexDirection="row" marginLeft={7}>
                     <Text dimColor>{'─'.repeat(visibleData.length)}</Text>
                 </Box>
-                {/* X Axis Labels */}
                 <Box flexDirection="row" marginLeft={7}>
                     {xLabels}
                 </Box>
-                {/* Legend */}
                 <Box marginTop={1} marginLeft={4} flexDirection="row" gap={2}>
-                    <Text color="green">█ 利益 (Profit)</Text>
-                    <Text color="cyan">█ 原価 (Cost)</Text>
-                    <Text dimColor>全高 = 売上 (Sales)</Text>
+                    <Text color="green">█ 利益</Text>
+                    <Text color="cyan">█ 原価</Text>
+                    <Text dimColor>(Esc: 戻る)</Text>
                 </Box>
             </Box>
         );
     };
+
+    const renderMetrics = () => {
+        // Calculate Metrics
+        const totalSales = dailyAnalysis.reduce((sum, d) => sum + d.totalSales, 0);
+        const totalProfit = dailyAnalysis.reduce((sum, d) => sum + d.profit, 0);
+        const totalMargin = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0;
+
+        const last7Days = dailyAnalysis.slice(Math.max(0, dailyAnalysis.length - 7));
+        const last7Sales = last7Days.reduce((sum, d) => sum + d.totalSales, 0);
+        const last7Profit = last7Days.reduce((sum, d) => sum + d.profit, 0);
+        const last7Margin = last7Sales > 0 ? (last7Profit / last7Sales) * 100 : 0;
+
+        const totalTransactions = dailyAnalysis.reduce((sum, d) => sum + d.transactionCount, 0);
+        const avgCustomerSpend = totalTransactions > 0 ? Math.floor(totalSales / totalTransactions) : 0;
+
+        const maxSalesDay = [...dailyAnalysis].sort((a, b) => b.totalSales - a.totalSales)[0];
+        const maxProfitDay = [...dailyAnalysis].sort((a, b) => b.profit - a.profit)[0];
+
+        return (
+            <Box flexDirection="column" flexGrow={1} paddingX={2} paddingTop={1}>
+                <Box flexDirection="row" justifyContent="space-between" marginBottom={1}>
+                    <Box flexDirection="column" width="48%">
+                        <Box borderStyle="single" borderColor="blue" flexDirection="column" paddingX={1}>
+                            <Text bold color="blue">全期間実績</Text>
+                            <Box justifyContent="space-between"><Text>総売上:</Text><Text>{totalSales} G</Text></Box>
+                            <Box justifyContent="space-between"><Text>総利益:</Text><Text>{totalProfit} G</Text></Box>
+                            <Box justifyContent="space-between"><Text>粗利率:</Text><Text>{totalMargin.toFixed(1)} %</Text></Box>
+                        </Box>
+                    </Box>
+                    <Box flexDirection="column" width="48%">
+                        <Box borderStyle="single" borderColor="cyan" flexDirection="column" paddingX={1}>
+                            <Text bold color="cyan">直近7日間</Text>
+                            <Box justifyContent="space-between"><Text>売上:</Text><Text>{last7Sales} G</Text></Box>
+                            <Box justifyContent="space-between"><Text>利益:</Text><Text>{last7Profit} G</Text></Box>
+                            <Box justifyContent="space-between"><Text>粗利率:</Text><Text>{last7Margin.toFixed(1)} %</Text></Box>
+                        </Box>
+                    </Box>
+                </Box>
+
+                <Box borderStyle="single" borderColor="magenta" flexDirection="column" paddingX={1} marginBottom={0}>
+                    <Text bold color="magenta">その他指標</Text>
+                    <Box flexDirection="row" justifyContent="space-between">
+                        <Box flexDirection="column" width="45%">
+                            <Text>客単価 (平均):</Text>
+                            <Text bold>{avgCustomerSpend} G</Text>
+                        </Box>
+                        <Box flexDirection="column" width="45%">
+                            <Text>最高売上:</Text>
+                            <Text>{maxSalesDay ? `${maxSalesDay.day}日目 (${maxSalesDay.totalSales} G)` : '-'}</Text>
+                        </Box>
+                        <Box flexDirection="column" width="45%">
+                            <Text>最高利益:</Text>
+                            <Text>{maxProfitDay ? `${maxProfitDay.day}日目 (${maxProfitDay.profit} G)` : '-'}</Text>
+                        </Box>
+                    </Box>
+                </Box>
+                <Box marginTop={0} justifyContent="flex-end">
+                    <Text dimColor>(Esc: 戻る)</Text>
+                </Box>
+            </Box>
+        );
+    }
 
     return (
         <Box flexDirection="column" width={60}>
@@ -273,12 +344,17 @@ export default function LedgerScreen({ state, changeScene }: Props) {
             <BorderBox height={14} flexDirection="column">
                 {activeTab === 'history' && renderHistory()}
                 {activeTab === 'analysis' && renderAnalysis()}
-                {activeTab === 'dashboard' && renderDashboard()}
+                {activeTab === 'dashboard' && (
+                    dashboardMode === 'menu' ? renderDashboardMenu() :
+                        dashboardMode === 'graph' ? renderSalesGraph() : renderMetrics()
+                )}
             </BorderBox>
 
             <Box justifyContent="center" marginTop={1}>
                 {activeTab === 'analysis' && <Text dimColor>※収支 = 総売上 - 総仕入 (在庫分含む)</Text>}
-                <Text dimColor>←→: タブ切替  ↑↓: スクロール  Esc: 戻る</Text>
+                {activeTab !== 'dashboard' && <Text dimColor>←→: タブ切替  ↑↓: スクロール  Esc: 戻る</Text>}
+                {activeTab === 'dashboard' && dashboardMode === 'menu' && <Text dimColor>←→: タブ切替  Enter: 決定  Esc: 戻る</Text>}
+                {activeTab === 'dashboard' && dashboardMode !== 'menu' && <Text dimColor>Esc: メニューへ戻る</Text>}
             </Box>
         </Box>
     );
