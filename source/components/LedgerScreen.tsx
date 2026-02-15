@@ -1,122 +1,207 @@
-import React, { useState } from 'react';
+
+import React, { useState, useMemo } from 'react';
 import { Box, Text, useInput } from 'ink';
 import BorderBox from './BorderBox.js';
-import { GameState, TransactionRecord } from '../types/index.js';
+import { GameState } from '../types/index.js';
 import { getItem } from '../types/items.js';
+import { aggregateByItem, aggregateByDay } from '../utils/ledgerUtils.js';
 
 type Props = {
     state: GameState;
     changeScene: (scene: GameState['scene']) => void;
 };
 
-export default function LedgerScreen({ state, changeScene }: Props) {
-    const [selectedIndex, setSelectedIndex] = useState(0);
-    const { transactions } = state;
+type Tab = 'history' | 'analysis' | 'dashboard';
 
-    // 最新の取引を上に表示するために逆順にする
-    const sortedTransactions = [...transactions].reverse();
+export default function LedgerScreen({ state, changeScene }: Props) {
+    const [activeTab, setActiveTab] = useState<Tab>('history');
+    const [scrollIndex, setScrollIndex] = useState(0);
+
+    // Data aggregation
+    const reversedTransactions = useMemo(() => [...state.transactions].reverse(), [state.transactions]);
+    const itemAnalysis = useMemo(() => aggregateByItem(state.transactions), [state.transactions]);
+    const dailyAnalysis = useMemo(() => aggregateByDay(state.transactions, state.day), [state.transactions, state.day]);
+
+    const VISIBLE_ROWS = 10;
 
     useInput((_input, key) => {
-        if (key.upArrow) {
-            setSelectedIndex(prev => Math.max(0, prev - 1));
-        } else if (key.downArrow) {
-            setSelectedIndex(prev => Math.min(sortedTransactions.length - 1, prev + 1));
-        } else if (key.escape || key.return) {
+        if (key.escape || (key.ctrl && _input === 'c')) {
             changeScene('menu');
+            return;
+        }
+
+        if (key.leftArrow) {
+            if (activeTab === 'analysis') setActiveTab('history');
+            else if (activeTab === 'dashboard') setActiveTab('analysis');
+            setScrollIndex(0);
+        } else if (key.rightArrow) {
+            if (activeTab === 'history') setActiveTab('analysis');
+            else if (activeTab === 'analysis') setActiveTab('dashboard');
+            setScrollIndex(0);
+        }
+
+        if (key.upArrow) {
+            setScrollIndex(prev => Math.max(0, prev - 1));
+        } else if (key.downArrow) {
+            const maxRows =
+                activeTab === 'history' ? reversedTransactions.length :
+                    activeTab === 'analysis' ? itemAnalysis.length :
+                        activeTab === 'dashboard' ? dailyAnalysis.length : 0;
+
+            setScrollIndex(prev => Math.min(Math.max(0, maxRows - VISIBLE_ROWS), prev + 1));
         }
     });
 
-    const MAX_VISIBLE = 10;
-    let start = 0;
-    let end = sortedTransactions.length;
+    const renderTabs = () => (
+        <Box flexDirection="row" justifyContent="space-around" borderStyle="single" borderBottom={false} borderLeft={false} borderRight={false} borderTop={false} marginBottom={0}>
+            <Text color={activeTab === 'history' ? 'green' : 'gray'} bold={activeTab === 'history'}>
+                {activeTab === 'history' ? '● ' : '  '}取引履歴
+            </Text>
+            <Text color={activeTab === 'analysis' ? 'cyan' : 'gray'} bold={activeTab === 'analysis'}>
+                {activeTab === 'analysis' ? '● ' : '  '}商品分析
+            </Text>
+            <Text color={activeTab === 'dashboard' ? 'yellow' : 'gray'} bold={activeTab === 'dashboard'}>
+                {activeTab === 'dashboard' ? '● ' : '  '}ダッシュボード
+            </Text>
+        </Box>
+    );
 
-    if (sortedTransactions.length > MAX_VISIBLE) {
-        const half = Math.floor(MAX_VISIBLE / 2);
-        start = Math.max(0, selectedIndex - half);
-        end = start + MAX_VISIBLE;
-        if (end > sortedTransactions.length) {
-            end = sortedTransactions.length;
-            start = Math.max(0, end - MAX_VISIBLE);
-        }
-    }
-    const visibleTransactions = sortedTransactions.slice(start, end);
-
-    const renderTransaction = (record: TransactionRecord, _index: number, isSelected: boolean) => {
-        const itemData = getItem(record.itemId);
-        const dateStr = `${record.date.day}日 ${record.date.hour}:${record.date.minute.toString().padStart(2, '0')}`;
-        const typeStr = record.type === 'buy' ? '仕入' : '販売';
-        const color = record.type === 'buy' ? 'red' : 'green';
-        const sign = record.type === 'buy' ? '-' : '+';
-
+    const renderHistory = () => {
+        const visibleData = reversedTransactions.slice(scrollIndex, scrollIndex + VISIBLE_ROWS);
         return (
-            <Box key={record.id} flexDirection="row" justifyContent="space-between">
-                <Text color={isSelected ? 'yellow' : undefined}>
-                    {isSelected ? '> ' : '  '}
-                    {dateStr} [{typeStr}] {itemData.name} x{record.quantity}
-                </Text>
-                <Text color={color}>
-                    {sign}{record.totalPrice} G
-                </Text>
+            <Box flexDirection="column" flexGrow={1}>
+                <Box borderStyle="single" borderTop={false} borderLeft={false} borderRight={false} borderColor="gray">
+                    <Box width={12}><Text dimColor>日時</Text></Box>
+                    <Box width={6}><Text dimColor>種別</Text></Box>
+                    <Box width={16}><Text dimColor>品名</Text></Box>
+                    <Box width={4} justifyContent="flex-end"><Text dimColor>個</Text></Box>
+                    <Box width={8} justifyContent="flex-end"><Text dimColor>単価</Text></Box>
+                    <Box width={12} justifyContent="flex-end"><Text dimColor>相手</Text></Box>
+                </Box>
+                {visibleData.length === 0 ? (
+                    <Box flexGrow={1} alignItems="center" justifyContent="center"><Text dimColor>取引なし</Text></Box>
+                ) : (
+                    visibleData.map((t) => {
+                        const itemName = getItem(t.itemId).name;
+                        const typeColor = t.type === 'buy' ? 'red' : 'green';
+                        const typeLabel = t.type === 'buy' ? '仕入' : '販売';
+                        const timeStr = `${t.date.day}日 ${t.date.hour}:${t.date.minute.toString().padStart(2, '0')}`;
+
+                        return (
+                            <Box key={t.id}>
+                                <Box width={12}><Text>{timeStr}</Text></Box>
+                                <Box width={6}><Text color={typeColor}>{typeLabel}</Text></Box>
+                                <Box width={16}><Text wrap="truncate-end">{itemName}</Text></Box>
+                                <Box width={4} justifyContent="flex-end"><Text>{t.quantity}</Text></Box>
+                                <Box width={8} justifyContent="flex-end"><Text>{t.price}G</Text></Box>
+                                <Box width={12} justifyContent="flex-end"><Text wrap="truncate-end">{t.partner}</Text></Box>
+                            </Box>
+                        );
+                    })
+                )}
             </Box>
         );
     };
 
-    // 簡易的な収支計算
-    const totalSales = transactions
-        .filter(t => t.type === 'sell')
-        .reduce((sum, t) => sum + t.totalPrice, 0);
+    const renderAnalysis = () => {
+        const visibleData = itemAnalysis.slice(scrollIndex, scrollIndex + VISIBLE_ROWS);
+        return (
+            <Box flexDirection="column" flexGrow={1}>
+                <Box borderStyle="single" borderTop={false} borderLeft={false} borderRight={false} borderColor="gray">
+                    <Box width={18}><Text dimColor>品名</Text></Box>
+                    <Box width={6} justifyContent="flex-end"><Text dimColor>件数</Text></Box>
+                    <Box width={10} justifyContent="flex-end"><Text dimColor>平均単価</Text></Box>
+                    <Box width={10} justifyContent="flex-end"><Text dimColor>総額</Text></Box>
+                    <Box width={8} justifyContent="flex-end"><Text dimColor>収支</Text></Box>
+                </Box>
+                {visibleData.length === 0 ? (
+                    <Box flexGrow={1} alignItems="center" justifyContent="center"><Text dimColor>データなし</Text></Box>
+                ) : (
+                    visibleData.map((a) => {
+                        const profit = a.totalSales - a.totalPurchases;
+                        const profitColor = profit > 0 ? 'green' : profit < 0 ? 'red' : 'white';
 
-    const totalCost = transactions
-        .filter(t => t.type === 'buy')
-        .reduce((sum, t) => sum + t.totalPrice, 0);
+                        return (
+                            <Box key={a.itemId}>
+                                <Box width={18}><Text wrap="truncate-end">{a.itemName}</Text></Box>
+                                <Box width={6} justifyContent="flex-end"><Text>{a.salesCount + a.purchaseCount}</Text></Box>
+                                <Box width={10} justifyContent="flex-end"><Text>{a.salesCount > 0 ? a.averageSellPrice : '-'}G</Text></Box>
+                                <Box width={10} justifyContent="flex-end"><Text>{a.totalSales}G</Text></Box>
+                                <Box width={8} justifyContent="flex-end"><Text color={profitColor}>{profit}G</Text></Box>
+                            </Box>
+                        );
+                    })
+                )}
+            </Box>
+        );
+    };
 
-    const profit = totalSales - totalCost;
+    const renderDashboard = () => {
+        const visibleData = dailyAnalysis.slice(scrollIndex, scrollIndex + VISIBLE_ROWS);
+
+        // Normalize bars
+        // Find max value across visible rows for scaling
+        const maxVal = Math.max(1, ...visibleData.map(d => Math.max(d.totalSales, Math.abs(d.profit))));
+        const BAR_WIDTH = 15;
+
+        return (
+            <Box flexDirection="column" flexGrow={1}>
+                <Box borderStyle="single" borderTop={false} borderLeft={false} borderRight={false} borderColor="gray">
+                    <Box width={6}><Text dimColor>Day</Text></Box>
+                    <Box width={8} justifyContent="flex-end"><Text dimColor>売上</Text></Box>
+                    <Box width={8} justifyContent="flex-end"><Text dimColor>利益</Text></Box>
+                    <Box width={30} paddingLeft={1}><Text dimColor>Graph(Sales|Profit)</Text></Box>
+                </Box>
+                {visibleData.length === 0 ? (
+                    <Box flexGrow={1} alignItems="center" justifyContent="center"><Text dimColor>データなし</Text></Box>
+                ) : (
+                    visibleData.map((d) => {
+                        const salesBarLen = Math.floor((d.totalSales / maxVal) * BAR_WIDTH);
+                        const profitBarLen = Math.floor((Math.abs(d.profit) / maxVal) * BAR_WIDTH);
+                        const profitColor = d.profit >= 0 ? 'green' : 'red';
+
+                        return (
+                            <Box key={d.day}>
+                                <Box width={6}><Text>{d.day}日</Text></Box>
+                                <Box width={8} justifyContent="flex-end"><Text>{d.totalSales}G</Text></Box>
+                                <Box width={8} justifyContent="flex-end"><Text color={profitColor}>{d.profit}G</Text></Box>
+                                <Box width={30} paddingLeft={1} flexDirection="row">
+                                    <Box width={15}>
+                                        <Text color="cyan">{'#'.repeat(salesBarLen)}</Text>
+                                    </Box>
+                                    <Box width={15}>
+                                        <Text color={profitColor}>{d.profit >= 0 ? '+' : '-'}{'#'.repeat(profitBarLen)}</Text>
+                                    </Box>
+                                </Box>
+                            </Box>
+                        );
+                    })
+                )}
+            </Box>
+        );
+    };
 
     return (
         <Box flexDirection="column" width={60}>
-            <Box justifyContent="center">
-                <Text bold color="cyan">
-                    📖 取引台帳 📖
+            {/* Header */}
+            <Box justifyContent="center" marginBottom={1}>
+                <Text bold color="magenta">
+                    📈 経営帳簿 (Ledger) 📈
                 </Text>
             </Box>
 
-            <Box flexDirection="row" justifyContent="space-between" marginY={1}>
-                {/* Summary Panel */}
-                <BorderBox width={60} title="サマリー">
-                    <Box justifyContent="space-around" width="100%">
-                        <Box flexDirection="column" alignItems="center">
-                            <Text>総売上</Text>
-                            <Text color="green">+{totalSales} G</Text>
-                        </Box>
-                        <Box flexDirection="column" alignItems="center">
-                            <Text>総仕入</Text>
-                            <Text color="red">-{totalCost} G</Text>
-                        </Box>
-                        <Box flexDirection="column" alignItems="center">
-                            <Text>純利益</Text>
-                            <Text color={profit >= 0 ? 'green' : 'red'}>
-                                {profit >= 0 ? '+' : ''}{profit} G
-                            </Text>
-                        </Box>
-                    </Box>
-                </BorderBox>
-            </Box>
+            {renderTabs()}
 
-            {/* Transaction List */}
-            <BorderBox title={`取引履歴 (${transactions.length}件)`}>
-                <Box flexDirection="column" minHeight={10}>
-                    {sortedTransactions.length === 0 ? (
-                        <Text dimColor>取引履歴はありません</Text>
-                    ) : (
-                        visibleTransactions.map((record, i) =>
-                            renderTransaction(record, start + i, start + i === selectedIndex)
-                        )
-                    )}
-                </Box>
+            {/* Main Content Area */}
+            <BorderBox height={14} flexDirection="column">
+                {activeTab === 'history' && renderHistory()}
+                {activeTab === 'analysis' && renderAnalysis()}
+                {activeTab === 'dashboard' && renderDashboard()}
             </BorderBox>
 
-            <Box justifyContent="center">
-                <Text dimColor>Esc: 戻る</Text>
+            <Box justifyContent="center" marginTop={1}>
+                {activeTab === 'analysis' && <Text dimColor>※収支 = 総売上 - 総仕入 (在庫分含む)</Text>}
+                <Text dimColor>←→: タブ切替  ↑↓: スクロール  Esc: 戻る</Text>
             </Box>
         </Box>
     );

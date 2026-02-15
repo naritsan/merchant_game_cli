@@ -27,6 +27,7 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
     const { sellShop } = state;
     const [mode, setMode] = React.useState<'command' | 'discount' | 'confirm_close'>('command');
     const [confirmSelected, setConfirmSelected] = React.useState(0); // 0: はい, 1: いいえ
+    const [scrollIndex, setScrollIndex] = React.useState(0);
 
     // 値引き価格管理（加速ロジック付き）
     const { value: discountPrice, setValue: setDiscountPrice, change: changeDiscountPrice } = useAcceleratedValue(0, 0, 999999);
@@ -48,6 +49,13 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
         }
 
         if (mode === 'command') {
+            if (key.leftArrow) {
+                setScrollIndex(prev => Math.max(0, prev - 1));
+            } else if (key.rightArrow) {
+                const maxScroll = Math.max(0, sellShop.displayItems.length - 6);
+                setScrollIndex(prev => Math.min(maxScroll, prev + 1));
+            }
+
             if (key.upArrow) {
                 moveCommand('up');
             } else if (key.downArrow) {
@@ -120,8 +128,8 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
     const merchantMaxHp = merchant ? merchant.maxHp : 0;
 
     // 陳列リストのスクロール表示用
-    const VISIBLE_ITEMS = 10;
-    const displayItemsSlice = sellShop.displayItems.slice(0, VISIBLE_ITEMS);
+    const VISIBLE_ITEMS = 6;
+    const displayItemsSlice = sellShop.displayItems.slice(scrollIndex, scrollIndex + VISIBLE_ITEMS);
 
     return (
         <Box flexDirection="column" width={60}>
@@ -133,23 +141,23 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
             </Box>
 
             <Box>
-                {/* Main Content Area (Left: Customer & Message) */}
-                <Box flexDirection="column" width={30}>
-                    {/* Customer Area (Top) */}
+                {/* Upper Row: Customer & Display List */}
+                <Box flexDirection="column" width={24}>
+                    {/* Customer Area */}
                     <BorderBox height={10} flexDirection="column">
                         <Box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
                             {customer ? (
                                 <>
                                     <Text bold>{customer.name}</Text>
                                     <Text> </Text>
-                                    <Text>希望: {getItem(customer.wantItem).name}</Text>
+                                    <Text>希望: {getItem(customer.wantItem).name.slice(0, 10)}</Text>
                                     {customer.targetPrice === 0 && (
                                         <Text color="red">（陳列なし）</Text>
                                     )}
                                     {state.showCustomerBudget && (
                                         <>
-                                            <Text dimColor>定価: {getItem(customer.wantItem).price} G</Text>
-                                            <Text dimColor>(予算: {customer.maxBudget} G)</Text>
+                                            <Text dimColor>定価: {getItem(customer.wantItem).price}G</Text>
+                                            <Text dimColor>(予算: {customer.maxBudget}G)</Text>
                                         </>
                                     )}
                                 </>
@@ -160,54 +168,63 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                             )}
                         </Box>
                     </BorderBox>
-
-                    {/* Message Area (Bottom) */}
-                    <BorderBox height={6} flexDirection="column">
-                        <Text>{sellShop.sellMessage}</Text>
-                        {sellShop.isWaiting && (
-                            <Text dimColor>{state.hour >= 18 ? '（Enter で みせをとじる）' : '（Enter で つぎのきゃく）'}</Text>
-                        )}
-                    </BorderBox>
                 </Box>
 
-                {/* Side Panel (Right: Display List) */}
-                <Box flexDirection="column" width={30}>
-                    <BorderBox flexGrow={1}>
+                <Box flexDirection="column" width={36}>
+                    {/* Display List Area */}
+                    <BorderBox height={10} flexDirection="column">
                         <Box justifyContent="space-between">
                             <Text bold>陳列リスト</Text>
-                            <Text dimColor>{sellShop.displayItems.length}点</Text>
+                            <Text dimColor>{sellShop.displayItems.length}点 {sellShop.displayItems.length > VISIBLE_ITEMS ? `(${scrollIndex + 1}-${Math.min(scrollIndex + VISIBLE_ITEMS, sellShop.displayItems.length)})` : ''}</Text>
                         </Box>
-                        <Text> </Text>
+                        {/* Headers */}
+                        <Box borderStyle="single" borderTop={false} borderLeft={false} borderRight={false} borderBottom={true} borderColor="gray" paddingX={0}>
+                            <Box width={16}><Text dimColor>品名</Text></Box>
+                            <Box width={9} justifyContent="center"><Text dimColor>卸値</Text></Box>
+                            <Box width={9} justifyContent="center"><Text dimColor>売値</Text></Box>
+                        </Box>
+
                         {sellShop.displayItems.length === 0 ? (
-                            <Text dimColor>売切</Text>
+                            <Box flexGrow={1} alignItems="center" justifyContent="center">
+                                <Text dimColor>売切</Text>
+                            </Box>
                         ) : (
-                            displayItemsSlice.map((item, i) => {
-                                const name = getItem(item.stockItem.itemId).name.slice(0, 10);
-                                const priceStr = `${item.price}G`;
-                                const costStr = `${Math.round(item.originalCost)}G`;
-                                return (
-                                    <Box key={i} justifyContent="space-between">
-                                        <Text>{name}</Text>
-                                        <Box>
-                                            <Text dimColor>[{costStr}]</Text>
-                                            <Text> {priceStr}</Text>
+                            <Box flexDirection="column">
+                                {displayItemsSlice.map((item, i) => {
+                                    const itemName = getItem(item.stockItem.itemId).name;
+                                    const priceStr = `${item.price}G`;
+                                    const costStr = `${Math.round(item.originalCost)}G`;
+                                    return (
+                                        <Box key={i}>
+                                            <Box width={16}>
+                                                <Text wrap="truncate-end">{itemName}</Text>
+                                            </Box>
+                                            <Box width={9} justifyContent="flex-end">
+                                                <Text dimColor>[{costStr}]</Text>
+                                            </Box>
+                                            <Box width={9} justifyContent="flex-end">
+                                                <Text> {priceStr}</Text>
+                                            </Box>
                                         </Box>
-                                    </Box>
-                                );
-                            })
-                        )}
-                        {sellShop.displayItems.length > VISIBLE_ITEMS && (
-                            <Box justifyContent="center">
-                                <Text dimColor>他{sellShop.displayItems.length - VISIBLE_ITEMS}件</Text>
+                                    );
+                                })}
                             </Box>
                         )}
                     </BorderBox>
                 </Box>
             </Box>
 
+            {/* Message Area (Full Width) */}
+            <BorderBox height={6} flexDirection="column" width={60}>
+                <Text>{sellShop.sellMessage}</Text>
+                {sellShop.isWaiting && (
+                    <Text dimColor>{state.hour >= 18 ? '（Enter で みせをとじる）' : '（Enter で つぎのきゃく）'}</Text>
+                )}
+            </BorderBox>
+
             {/* Bottom: Commands + Status */}
             <Box>
-                <BorderBox width={30}>
+                <BorderBox width={24}>
                     {sellShop.isWaiting ? (
                         <Box paddingX={1}>
                             <Text dimColor>Enter: つぎへ</Text>
@@ -271,7 +288,7 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                         })()
                     )}
                 </BorderBox>
-                <BorderBox width={30}>
+                <BorderBox width={36}>
                     <Box flexDirection="column" paddingX={1}>
                         <Text>
                             {merchantName} HP {merchantHp}/{merchantMaxHp}
@@ -306,7 +323,7 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                     ? <Text dimColor>Esc: キャンセル</Text>
                     : mode === 'confirm_close'
                         ? <Text dimColor>←→: 選択  Enter: 決定  Esc: キャンセル</Text>
-                        : <Text dimColor>↑↓: 選択  Enter: 決定  Ctrl+C: 終了</Text>
+                        : <Text dimColor>↑↓: コマンド選択  ←→: リストスクロール  Enter: 決定</Text>
                 }
             </Box>
         </Box>
