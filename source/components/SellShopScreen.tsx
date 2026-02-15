@@ -25,7 +25,8 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
     });
 
     const { sellShop } = state;
-    const [mode, setMode] = React.useState<'command' | 'discount'>('command');
+    const [mode, setMode] = React.useState<'command' | 'discount' | 'confirm_close'>('command');
+    const [confirmSelected, setConfirmSelected] = React.useState(0); // 0: はい, 1: いいえ
 
     // 値引き価格管理（加速ロジック付き）
     const { value: discountPrice, setValue: setDiscountPrice, change: changeDiscountPrice } = useAcceleratedValue(0, 0, 999999);
@@ -73,7 +74,8 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                 } else if (command === '断る') {
                     refuse();
                 } else if (command === '店を閉じる') {
-                    closeShop();
+                    setConfirmSelected(1); // デフォルトは「いいえ」
+                    setMode('confirm_close');
                 }
             }
         } else if (mode === 'discount') {
@@ -91,10 +93,25 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
             } else if (key.escape) {
                 setMode('command');
             }
+        } else if (mode === 'confirm_close') {
+            if (key.leftArrow || key.rightArrow || key.upArrow || key.downArrow) {
+                setConfirmSelected(prev => 1 - prev);
+            } else if (key.escape) {
+                setMode('command');
+            } else if (key.return) {
+                if (confirmSelected === 0) {
+                    closeShop();
+                } else {
+                    setMode('command');
+                }
+            }
         }
     });
 
     const { customer } = sellShop;
+    const activeItem = customer ? sellShop.displayItems.find(d => d.stockItem.itemId === customer.wantItem) : null;
+    const activeItemCost = activeItem ? Math.round(activeItem.originalCost) : 0;
+
     const merchant = state.party[0];
     // merchant is possibly undefined if party is empty, though unlikely in this game logic.
     // Adding a fallback to avoid crash if party is somehow empty.
@@ -148,7 +165,7 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                     <BorderBox height={6} flexDirection="column">
                         <Text>{sellShop.sellMessage}</Text>
                         {sellShop.isWaiting && (
-                            <Text dimColor>（Enter で つぎのきゃく）</Text>
+                            <Text dimColor>{state.hour >= 18 ? '（Enter で みせをとじる）' : '（Enter で つぎのきゃく）'}</Text>
                         )}
                     </BorderBox>
                 </Box>
@@ -165,12 +182,16 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                             <Text dimColor>売切</Text>
                         ) : (
                             displayItemsSlice.map((item, i) => {
-                                const name = getItem(item.stockItem.itemId).name.slice(0, 12);
-                                const priceStr = `${item.price} G`;
+                                const name = getItem(item.stockItem.itemId).name.slice(0, 10);
+                                const priceStr = `${item.price}G`;
+                                const costStr = `${Math.round(item.originalCost)}G`;
                                 return (
                                     <Box key={i} justifyContent="space-between">
                                         <Text>{name}</Text>
-                                        <Text>{priceStr}</Text>
+                                        <Box>
+                                            <Text dimColor>[{costStr}]</Text>
+                                            <Text> {priceStr}</Text>
+                                        </Box>
                                     </Box>
                                 );
                             })
@@ -194,8 +215,24 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                     ) : mode === 'discount' ? (
                         <Box flexDirection="column" paddingX={1}>
                             <Text bold>いくらに しますか？</Text>
-                            <Text color="yellow" bold>  {discountPrice} G</Text>
+                            <Box>
+                                <Text color="yellow" bold>  {discountPrice} G</Text>
+                                <Text dimColor> (仕入: {activeItemCost} G)</Text>
+                            </Box>
                             <Text dimColor>↑↓: 増減(長押しで加速)  Enter: 決定</Text>
+                        </Box>
+                    ) : mode === 'confirm_close' ? (
+                        <Box flexDirection="column" paddingX={1}>
+                            <Text bold>店を 閉じますか？</Text>
+                            <Box flexDirection="row">
+                                <Text color={confirmSelected === 0 ? 'yellow' : undefined}>
+                                    {confirmSelected === 0 ? '▶ はい' : '  はい'}
+                                </Text>
+                                <Text>    </Text>
+                                <Text color={confirmSelected === 1 ? 'yellow' : undefined}>
+                                    {confirmSelected === 1 ? '▶ いいえ' : '  いいえ'}
+                                </Text>
+                            </Box>
                         </Box>
                     ) : (
                         (() => {
@@ -267,7 +304,9 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
             <Box justifyContent="center" marginTop={1}>
                 {mode === 'discount'
                     ? <Text dimColor>Esc: キャンセル</Text>
-                    : <Text dimColor>↑↓: 選択  Enter: 決定  Ctrl+C: 終了</Text>
+                    : mode === 'confirm_close'
+                        ? <Text dimColor>←→: 選択  Enter: 決定  Esc: キャンセル</Text>
+                        : <Text dimColor>↑↓: 選択  Enter: 決定  Ctrl+C: 終了</Text>
                 }
             </Box>
         </Box>

@@ -218,7 +218,7 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
                 sellShop: {
                     ...prev.sellShop,
                     displayItems: newDisplayItems,
-                    sellMessage: `${itemData.name} を ${price} G で 売りました！`,
+                    sellMessage: `${itemData.name} を ${price} G で 売りました！${prev.hour >= 17 && prev.minute >= 30 ? '\nもう18時です。店を閉めましょう。' : ''}`,
                     salesCount: prev.sellShop.salesCount + 1,
                     customer: null,
                     isWaiting: true,
@@ -248,7 +248,7 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
                 // 交渉終了
                 updateSellShop(() => ({
                     customer: null,
-                    sellMessage: `「${customer.targetPrice} G か… 縁が なかったようだな」\n（客は 帰っていった…）`,
+                    sellMessage: `「${customer.targetPrice} G か… 縁が なかったようだな」\n（客は 帰っていった…）${state.hour >= 17 && state.minute >= 30 ? '\nもう18時です。店を閉めましょう。' : ''}`,
                     isWaiting: true
                 }));
                 advanceTime(30);
@@ -296,7 +296,7 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
         // 交渉決裂
         updateSellShop(() => ({
             customer: null,
-            sellMessage: `「${newPrice} G か… 縁が なかったようだな」\n（客は 帰っていった…）`,
+            sellMessage: `「${newPrice} G か… 縁が なかったようだな」\n（客は 帰っていった…）${state.hour >= 17 && state.minute >= 30 ? '\nもう18時です。店を閉めましょう。' : ''}`,
             isWaiting: true
         }));
         advanceTime(30);
@@ -304,9 +304,9 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
 
     // 断る
     const refuse = useCallback(() => {
-        updateSellShop(_prev => {
+        updateSellShop(() => {
             return {
-                sellMessage: '残念そうに 帰っていった…',
+                sellMessage: `残念そうに 帰っていった…${state.hour >= 17 && state.minute >= 30 ? '\nもう18時です。店を閉めましょう。' : ''}`,
                 customer: null,
                 isWaiting: true,
             };
@@ -317,6 +317,10 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
     // コマンド実行
     const selectCommand = useCallback(() => {
         if (sellShop.isWaiting) {
+            if (state.hour >= 18) {
+                closeShop();
+                return;
+            }
             if (state.sellShop.displayItems.length === 0) {
                 // 商品がない場合は閉めるかメッセージ
                 updateSellShop(() => ({
