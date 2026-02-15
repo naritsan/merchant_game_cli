@@ -118,7 +118,7 @@ export default function LedgerScreen({ state, changeScene }: Props) {
                     <Box flexGrow={1} alignItems="center" justifyContent="center"><Text dimColor>データなし</Text></Box>
                 ) : (
                     visibleData.map((a) => {
-                        const profit = a.totalSales - a.totalPurchases;
+                        const profit = a.totalSales - a.totalCost;
                         const profitColor = profit > 0 ? 'green' : profit < 0 ? 'red' : 'white';
 
                         return (

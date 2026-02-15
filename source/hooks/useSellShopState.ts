@@ -209,6 +209,7 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
                 price: price, // 売値
                 totalPrice: price,
                 partner: prev.sellShop.customer?.name ?? '客',
+                cost: targetDisplayItem.originalCost, // 売買時点での原価（平均仕入単価）を記録
             };
 
             return {

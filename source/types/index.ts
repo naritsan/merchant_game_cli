@@ -26,6 +26,7 @@ export type TransactionRecord = {
 	quantity: number;
 	price: number;
 	totalPrice: number;
+	cost?: number; // 原価 (仕入れ時の平均単価)
 	partner: string;
 };
 

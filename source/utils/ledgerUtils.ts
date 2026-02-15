@@ -7,23 +7,7 @@ export type ItemAnalysis = {
     itemName: string;
     salesCount: number;
     totalSales: number;
-    totalCost: number; // For now, we might not track exact cost per transaction perfectly, but we can estimate or retrieve if available. 
-    // In TransactionRecord, we only have 'price' (sell price) or 'price' (buy price) depending on type.
-    // For profit analysis, we need to know the cost basis of sold items.
-    // The current TransactionRecord for 'sell' doesn't explicitly store the original cost of the specific item sold.
-    // However, we can approximate profit if we assume average purchase price at the time of sale, 
-    // BUT 'TransactionRecord' for 'sell' currently only stores: id, date, type='sell', itemId, quantity, price(sold price), totalPrice, partner.
-    // It does NOT store the original cost. 
-    // To calculate profit accurately, we would need to store 'cost' in TransactionRecord or look up historical average.
-    // For this version, let's assume we can't perfectly retroactively calculate profit for past transactions if cost wasn't recorded.
-    // WAIT, `SellShopScreen`'s `executeSale` calculates profit but doesn't store it in TransactionRecord!
-    // We should probably update TransactionRecord to include 'profit' or 'cost' for sell transactions in the future.
-    // For now, let's focus on Sales and pure aggregation. 
-    // If we want profit, we might need to modify TransactionRecord in a future refactor or just show "Revenue" for now.
-    // ACTUALLY, let's keep it simple: Sales Revenue and Purchase Cost.
-    // Profit = Total Sales - Total Purchases (Simple Cash Flow profit)
-    // OR Profit per item = (Avg Sell Price - Avg Buy Price) * Sold Quantity (Approximation)
-
+    totalCost: number;
     averageSellPrice: number;
     purchaseCount: number;
     totalPurchases: number;
@@ -62,6 +46,10 @@ export function aggregateByItem(transactions: TransactionRecord[]): ItemAnalysis
         if (t.type === 'sell') {
             analysis.salesCount += t.quantity;
             analysis.totalSales += t.totalPrice;
+            // Calculate cost for this sale if available
+            if (t.cost !== undefined) {
+                analysis.totalCost += t.cost * t.quantity;
+            }
         } else if (t.type === 'buy') {
             analysis.purchaseCount += t.quantity;
             analysis.totalPurchases += t.totalPrice;
@@ -112,14 +100,21 @@ export function aggregateByDay(transactions: TransactionRecord[], currentDay: nu
 
         if (t.type === 'sell') {
             analysis.totalSales += t.totalPrice;
+            // Operating Profit: Sales - Cost of Goods Sold
+            if (t.cost !== undefined) {
+                analysis.profit += (t.price - t.cost) * t.quantity;
+            } else {
+                // Fallback for old data: treat as 0 profit or full profit?
+                // Plan said "treat as 0 profit".
+                // If we treat as 0 profit, then profit is 0.
+            }
         } else if (t.type === 'buy') {
             analysis.totalPurchases += t.totalPrice;
+            // Buying inventory affects Cash Flow but not Operating Profit directly in this simple model
+            // If we want "Cash Flow", we subtract purchases.
+            // If we want "Profit", we don't subtract purchases (they are assets), we subtract Cost of Goods Sold when selling.
+            // The user wanted "Profit".
         }
-    }
-
-    // Calculate profit (Cash flow)
-    for (const analysis of map.values()) {
-        analysis.profit = analysis.totalSales - analysis.totalPurchases;
     }
 
     return Array.from(map.values()).sort((a, b) => a.day - b.day);
