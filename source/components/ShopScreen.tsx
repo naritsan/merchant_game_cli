@@ -87,7 +87,7 @@ export default function ShopScreen({ state, setState, changeScene, advanceTime }
             {/* Title */}
             <Box justifyContent="center">
                 <Text bold color="magenta">
-                    🏪 ぶきとぼうぐのみせ 🏪
+                    🏪 武器と防具の店 🏪
                 </Text>
             </Box>
 
@@ -164,7 +164,7 @@ export default function ShopScreen({ state, setState, changeScene, advanceTime }
                         />
                     ) : (
                         <Box paddingX={1} flexDirection="column">
-                            <Text dimColor>Esc: もどる</Text>
+                            <Text dimColor>Esc: 戻る</Text>
                             {shop.mode === 'sell' && <Text dimColor>←→: タブ切替</Text>}
                         </Box>
                     )}
@@ -179,7 +179,7 @@ export default function ShopScreen({ state, setState, changeScene, advanceTime }
                 {shop.mode === 'buy_quantity' ? (
                     <Text dimColor>↑↓: 個数変更  Enter: 購入  Esc: キャンセル</Text>
                 ) : (
-                    <Text dimColor>↑↓: 選択  Enter: 決定  Esc: もどる  Ctrl+C: 終了</Text>
+                    <Text dimColor>↑↓: 選択  Enter: 決定  Esc: 戻る  Ctrl+C: 終了</Text>
                 )}
             </Box>
         </Box>

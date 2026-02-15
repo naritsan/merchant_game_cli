@@ -58,7 +58,7 @@ export default function InventoryScreen({ state, changeScene }: Props) {
         <Box flexDirection="column" width={60}>
             <Box justifyContent="center">
                 <Text bold color="cyan">
-                    🎒 もちもの状況 🎒
+                    🎒 持ち物状況 🎒
                 </Text>
             </Box>
 
@@ -66,12 +66,12 @@ export default function InventoryScreen({ state, changeScene }: Props) {
             <Box flexDirection="row" justifyContent="center" marginTop={1}>
                 <Box borderStyle="single" borderColor={activeTab === 'possessions' ? 'cyan' : 'gray'} paddingX={1}>
                     <Text color={activeTab === 'possessions' ? 'cyan' : undefined} bold={activeTab === 'possessions'}>
-                        {activeTab === 'possessions' ? '● ' : '  '}手持ち (Possessions)
+                        {activeTab === 'possessions' ? '● ' : '  '}手持ち
                     </Text>
                 </Box>
                 <Box borderStyle="single" borderColor={activeTab === 'stock' ? 'yellow' : 'gray'} paddingX={1} marginLeft={1}>
                     <Text color={activeTab === 'stock' ? 'yellow' : undefined} bold={activeTab === 'stock'}>
-                        {activeTab === 'stock' ? '● ' : '  '}在庫 (Stock)
+                        {activeTab === 'stock' ? '● ' : '  '}在庫
                     </Text>
                 </Box>
             </Box>
@@ -116,7 +116,9 @@ export default function InventoryScreen({ state, changeScene }: Props) {
                             <Box flexDirection="column">
                                 <Text color="green" bold>{itemData.name}</Text>
                                 <Text>タイプ: {itemData.type}</Text>
-                                <Text>価値: {itemData.price} G</Text>
+                                {state.showCustomerBudget && (
+                                    <Text>価値: {itemData.price} G</Text>
+                                )}
                                 {itemData.attack !== undefined && (
                                     <Text>攻撃力: {itemData.attack}</Text>
                                 )}
@@ -139,7 +141,7 @@ export default function InventoryScreen({ state, changeScene }: Props) {
             </Box>
 
             <Box justifyContent="center" marginTop={1}>
-                <Text dimColor>←→: タブ切替  ↑↓: 選択  Esc: もどる</Text>
+                <Text dimColor>←→: タブ切替  ↑↓: 選択  Esc: 戻る</Text>
             </Box>
         </Box>
     );

@@ -230,54 +230,6 @@ export function useShopState({ state, setState, changeScene, advanceTime }: UseS
         [setState],
     );
 
-    const selectMenuItem = useCallback(() => {
-        const command = SHOP_COMMANDS[shop.selectedMenuItem]!;
-        switch (command) {
-            case 'かう': {
-                updateShop(() => ({
-                    mode: 'buy',
-                    selectedItemIndex: 0,
-                    shopMessage: 'なにを かいますか？',
-                }));
-                break;
-            }
-
-            case 'うる': {
-                updateShop(() => ({
-                    mode: 'sell',
-                    selectedItemIndex: 0,
-                    shopMessage: 'なにを うりますか？',
-                }));
-                break;
-            }
-
-            case 'そうび': {
-                updateShop(() => ({
-                    shopMessage: 'そうび きのうは まだ できません…',
-                }));
-                break;
-            }
-
-            case 'やめる': {
-                updateShop(() => ({
-                    shopMessage: 'またのおこしを おまちしています！',
-                }));
-                exitShop();
-                break;
-            }
-
-            // No default
-        }
-    }, [shop.selectedMenuItem, updateShop, changeScene]);
-
-    const selectItem = useCallback(() => {
-        if (shop.mode === 'buy') {
-            enterBuyQuantityMode();
-        } else if (shop.mode === 'sell') {
-            sellItem(shop.selectedItemIndex);
-        }
-    }, [shop.mode, shop.selectedItemIndex, enterBuyQuantityMode, sellItem]);
-
     const goBackToMenu = useCallback(() => {
         updateShop(() => ({
             mode: 'menu',
@@ -289,6 +241,34 @@ export function useShopState({ state, setState, changeScene, advanceTime }: UseS
         advanceTime(60); // 店を出るときに1時間経過
         changeScene('menu');
     }, [advanceTime, changeScene]);
+
+    const selectMenuItem = useCallback(() => {
+        const command = SHOP_COMMANDS[shop.selectedMenuItem];
+        switch (command) {
+            case '買う':
+                updateShop(() => ({
+                    mode: 'buy',
+                    shopMessage: 'どれを かいますか？',
+                }));
+                break;
+            case '装備':
+                updateShop(() => ({
+                    shopMessage: 'そのきのうは まだないよ。',
+                }));
+                break;
+            case '戻る':
+                exitShop();
+                break;
+        }
+    }, [shop.selectedMenuItem, updateShop, exitShop]);
+
+    const selectItem = useCallback(() => {
+        if (shop.mode === 'buy') {
+            enterBuyQuantityMode();
+        } else if (shop.mode === 'sell') {
+            sellItem(shop.selectedItemIndex);
+        }
+    }, [shop.mode, shop.selectedItemIndex, enterBuyQuantityMode, sellItem]);
 
     return { moveMenuItem, selectMenuItem, selectItem, goBackToMenu, exitShop, changeTab, buyItem, enterBuyQuantityMode };
 }

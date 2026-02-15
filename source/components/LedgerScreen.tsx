@@ -76,7 +76,7 @@ export default function LedgerScreen({ state, changeScene }: Props) {
         <Box flexDirection="column" width={60}>
             <Box justifyContent="center">
                 <Text bold color="cyan">
-                    📖 取引台帳 (Ledger) 📖
+                    📖 取引台帳 📖
                 </Text>
             </Box>
 
@@ -116,7 +116,7 @@ export default function LedgerScreen({ state, changeScene }: Props) {
             </BorderBox>
 
             <Box justifyContent="center">
-                <Text dimColor>Esc: もどる</Text>
+                <Text dimColor>Esc: 戻る</Text>
             </Box>
         </Box>
     );

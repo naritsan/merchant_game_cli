@@ -129,7 +129,7 @@ export default function ShopSetupScreen({ state, setState, changeScene, advanceT
                                 const itemData = getItem(stockItem.itemId);
                                 return (
                                     <Text key={index} color={isSelected ? 'yellow' : undefined}>
-                                        {isSelected ? '▶' : ' '} {itemData.name} x{stockItem.quantity} (定価:{itemData.price}G / 平均:{Math.round(stockItem.averagePurchasePrice)}G)
+                                        {isSelected ? '▶' : ' '} {itemData.name} x{stockItem.quantity} ({state.showCustomerBudget ? `定価:${itemData.price}G / ` : ''}平均:{Math.round(stockItem.averagePurchasePrice)}G)
                                     </Text>
                                 );
                             })}
@@ -186,13 +186,13 @@ export default function ShopSetupScreen({ state, setState, changeScene, advanceT
                 {state.sellShop.displayItems.length > 0 && mode === 'select' ? (
                     <Box marginBottom={1}>
                         <Text color="green" bold>
-                            準備OK！ [P] キーで みせをひらく
+                            準備OK！ [P] キーで 開店
                         </Text>
                     </Box>
                 ) : null}
                 <Text dimColor>
                     {mode === 'select'
-                        ? '↑↓: 選択 Enter: 設定 Esc: もどる'
+                        ? '↑↓: 選択 Enter: 設定 Esc: 戻る'
                         : mode === 'price'
                             ? '↑↓: 価格変更 ←→:±100 Enter:次へ Esc:戻る'
                             : '↑↓: 数量変更 ←→:±10  Enter:確定  Esc:戻る'}

@@ -126,7 +126,7 @@ export default function FortuneScreen({ state, changeScene, revealLuck }: Props)
             </BorderBox>
             {(phase === 'confirm' || isFinished) && (
                 <Box justifyContent="center" marginTop={1}>
-                    <Text dimColor>矢印キー: 選択  Enter: 決定</Text>
+                    <Text dimColor>←→: 選択  Enter: 決定</Text>
                 </Box>
             )}
         </Box>

@@ -15,8 +15,8 @@ type Props = {
 type MenuMode = 'main' | 'submenu' | 'rest' | 'confirm' | 'debug_menu' | 'debug_date' | 'debug_time' | 'debug_luck' | 'debug_weather' | 'debug_gold';
 
 const CATEGORIES = [
-    { id: 'action', label: 'こうどう', commands: ['みせをひらく', 'しいれ', 'うらない'] },
-    { id: 'system', label: 'システム', commands: ['もちもの', 'ちょうぼ', 'カレンダー', 'Tips'] },
+    { id: 'action', label: '行動', commands: ['開店', '仕入れ', '占い'] },
+    { id: 'system', label: 'システム', commands: ['持ち物', '帳簿', 'カレンダー', 'Tips'] },
     { id: 'debug', label: 'デバッグ', commands: ['日付変更', '時間変更', '運勢変更', '天気変更', '所持金変更', '客予算表示切替'] },
 ] as const;
 
@@ -31,19 +31,20 @@ const WEATHER_LABELS: Record<string, string> = {
 
 export default function MainMenuScreen({ state, setState, changeScene, sleep, advanceTime }: Props) {
     const { exit } = useApp();
-    const mode = state.menuMode;
-    const selectedMain = state.selectedMain;
-    const selectedSub = state.selectedSub;
+    const [localModeOverride, setLocalModeOverride] = React.useState<MenuMode | null>(null);
+    const currentMode = localModeOverride || state.menuMode;
 
     const setMode = (m: MenuMode) => {
         if (m === 'main' || m === 'submenu') {
+            setLocalModeOverride(null);
             setState(prev => ({ ...prev, menuMode: m }));
         } else {
-            setLocalMode(m);
+            setLocalModeOverride(m);
         }
     };
-    const [localMode, setLocalMode] = React.useState<MenuMode>('main');
-    const currentMode = (mode === 'main' || mode === 'submenu') ? mode : localMode;
+
+    const selectedMain = state.selectedMain;
+    const selectedSub = state.selectedSub;
 
     const setSelectedMain = (s: number | ((prev: number) => number)) =>
         setState(prev => ({ ...prev, selectedMain: typeof s === 'function' ? s(prev.selectedMain) : s }));
@@ -68,9 +69,9 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
     const isBeforeOpen = state.hour < 9;
     const isAfterClose = state.hour >= 18;
 
-    const mainMenuItems = ['こうどう', 'システム', 'デバッグ', 'やすむ', 'おわる'];
+    const mainMenuItems = ['行動', 'システム', 'デバッグ', '休む', '終わる'];
     const currentCategory = selectedMain < CATEGORIES.length ? CATEGORIES[selectedMain] : null;
-    const submenuItems = currentCategory ? [...currentCategory.commands, 'もどる'] : [];
+    const submenuItems = currentCategory ? [...currentCategory.commands, '戻る'] : [];
 
     const restOptions = isNight ? [
         { label: '明日(6:00)まで 休む', isSleep: true },
@@ -88,7 +89,7 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
 
     const handleCommand = (command: string) => {
         switch (command) {
-            case 'みせをひらく': {
+            case '開店': {
                 if (state.dayOfWeek === 'Sunday') {
                     setMessage('今日は 安息日 だ。 店を開くことはできない。');
                     return;
@@ -100,7 +101,7 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
                 changeScene('shop_setup');
                 break;
             }
-            case 'しいれ': {
+            case '仕入れ': {
                 if (state.dayOfWeek === 'Sunday') {
                     setMessage('今日は 安息日 だ。 市場も休みだ。');
                     return;
@@ -116,7 +117,7 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
                 changeScene('shop');
                 break;
             }
-            case 'うらない': {
+            case '占い': {
                 if (state.isLuckRevealed) {
                     setMessage('今日の運勢は もう占ってもらった。');
                     return;
@@ -134,10 +135,10 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
             case 'Tips':
                 changeScene('tips');
                 break;
-            case 'もちもの':
+            case '持ち物':
                 changeScene('inventory');
                 break;
-            case 'ちょうぼ':
+            case '帳簿':
                 changeScene('ledger');
                 break;
             case '日付変更':
@@ -161,11 +162,11 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
                 setState(prev => ({ ...prev, showCustomerBudget: !prev.showCustomerBudget }));
                 setMessage(`客の予算表示を ${!state.showCustomerBudget ? 'ON' : 'OFF'} にしました。`);
                 break;
-            case 'やすむ':
+            case '休む':
                 setMode('rest');
                 setRestSelected(0);
                 break;
-            case 'おわる':
+            case '終わる':
                 setConfirmAction({
                     message: 'ゲームを終了します。よろしいですか？',
                     onConfirm: () => exit()
@@ -237,25 +238,24 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
             } else if (key.downArrow) {
                 setSelectedMain(prev => (prev + 1) % mainMenuItems.length);
             } else if (key.return) {
-                const item = mainMenuItems[selectedMain];
-                if (item === 'こうどう') {
+                if (selectedMain === 0) { // 行動
                     if (isNight) {
                         setMessage('もう 夜遅い。行動は控えよう。');
                         return;
                     }
                     setMode('submenu');
                     setSelectedSub(0);
-                } else if (item === 'システム') {
+                } else if (selectedMain === 1) { // システム
                     setMode('submenu');
                     setSelectedSub(0);
-                } else if (item === 'デバッグ') {
+                } else if (selectedMain === 2) { // デバッグ
                     setMode('submenu');
                     setSelectedSub(0);
-                } else if (item === 'やすむ') {
+                } else if (selectedMain === 3) { // 休む
                     setMode('rest');
                     setRestSelected(0);
-                } else if (item === 'おわる') {
-                    handleCommand('おわる');
+                } else if (selectedMain === 4) { // 終わる
+                    handleCommand('終わる');
                 }
             }
         } else if (currentMode === 'submenu') {
@@ -267,7 +267,7 @@ export default function MainMenuScreen({ state, setState, changeScene, sleep, ad
                 setMode('main');
             } else if (key.return) {
                 const item = submenuItems[selectedSub]!;
-                if (item === 'もどる') {
+                if (item === '戻る') {
                     setMode('main');
                 } else {
                     handleCommand(item);

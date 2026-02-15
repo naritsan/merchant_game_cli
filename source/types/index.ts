@@ -85,48 +85,50 @@ export type Customer = {
 	dialogue: string;
 };
 
-export const CUSTOMERS: Omit<Customer, 'wantItem' | 'maxBudget' | 'targetPrice' | 'currentNegotiation' | 'dialogue'>[] = [
-	{ name: 'まちのむすめ', maxNegotiations: 0 },
-	{ name: 'たびのせんし', maxNegotiations: 2 },
-	{ name: 'おかねもち', maxNegotiations: 3 },
-	{ name: 'まほうつかい', maxNegotiations: 2 },
-	{ name: 'ぼうけんしゃ', maxNegotiations: 0 },
-	{ name: 'おじいさん', maxNegotiations: 3 },
-	{ name: 'こどもの王子', maxNegotiations: 2 },
+export const CUSTOMERS: (Omit<Customer, 'wantItem' | 'maxBudget' | 'targetPrice' | 'currentNegotiation' | 'dialogue'> & { preferredItems: ItemId[] })[] = [
+	{ name: 'まちのむすめ', maxNegotiations: 0, preferredItems: ['herb', 'cloth_clothes'] },
+	{ name: 'たびのせんし', maxNegotiations: 2, preferredItems: ['copper_sword', 'iron_sword', 'leather_shield', 'iron_shield'] },
+	{ name: 'おかねもち', maxNegotiations: 3, preferredItems: ['steel_sword', 'chain_mail', 'iron_shield'] },
+	{ name: 'まほうつかい', maxNegotiations: 2, preferredItems: ['herb', 'cloth_clothes'] },
+	{ name: 'ぼうけんしゃ', maxNegotiations: 0, preferredItems: ['iron_sword', 'leather_shield', 'herb'] },
+	{ name: 'おじいさん', maxNegotiations: 3, preferredItems: ['herb', 'cloth_clothes'] },
+	{ name: 'こどもの王子', maxNegotiations: 2, preferredItems: ['copper_sword', 'leather_shield'] },
 ];
 
 // === 戦闘 ===
 
-export type BattleCommand = 'たたかう' | 'まほう' | 'どうぐ' | 'にげる';
+// === 戦闘 ===
+
+export type BattleCommand = '戦う' | '魔法' | '道具' | '逃げる';
 
 export const BATTLE_COMMANDS: BattleCommand[] = [
-	'たたかう',
-	'まほう',
-	'どうぐ',
-	'にげる',
+	'戦う',
+	'魔法',
+	'道具',
+	'逃げる',
 ];
 
 // === 仕入れショップ ===
 
-export type ShopCommand = 'かう' | 'うる' | 'そうび' | 'やめる';
+export type ShopCommand = '買う' | '装備' | '戻る';
 
 export const SHOP_COMMANDS: ShopCommand[] = [
-	'かう',
-	'そうび',
-	'やめる',
+	'買う',
+	'装備',
+	'戻る',
 ];
 
 // SHOP_ITEMS removed, utilize getAllItems() or filtered list from items.ts
 
 // === 販売シーン ===
 
-export type SellShopCommand = 'うる' | 'ねびき' | 'ことわる' | 'みせをとじる';
+export type SellShopCommand = '売る' | '値引き' | '断る' | '店を閉じる';
 
 export const SELL_SHOP_COMMANDS: SellShopCommand[] = [
-	'うる',
-	'ねびき',
-	'ことわる',
-	'みせをとじる',
+	'売る',
+	'値引き',
+	'断る',
+	'店を閉じる',
 ];
 
 export type SellShopPhase = 'setup' | 'selling' | 'negotiating' | 'counter_offer';
@@ -141,26 +143,26 @@ export type SellShopState = {
 	negotiationResult?: 'success' | 'failed' | 'gave_up';
 	counterOfferPrice?: number;
 	isWaiting: boolean;
-	currentSales: number;
-	currentProfit: number;
+	currentSales: number; // Added tracking
+	currentProfit: number; // Added tracking
 };
 
 // === 画面遷移 ===
 
 export type Scene = 'menu' | 'battle' | 'shop' | 'shop_setup' | 'sell_shop' | 'inventory' | 'calendar' | 'fortune' | 'tips' | 'ledger' | 'stock_list';
 
-export type MenuCommand = 'しいれ' | 'みせをひらく' | 'うらない' | 'ちょうぼ' | 'カレンダー' | 'もちもの' | 'Tips' | 'やすむ' | 'おわる';
+export type MenuCommand = '仕入れ' | '開店' | '占い' | '帳簿' | 'カレンダー' | '持ち物' | 'Tips' | '休む' | '終わる';
 
 export const MENU_COMMANDS: MenuCommand[] = [
-	'みせをひらく',
-	'しいれ',
-	'うらない',
-	'ちょうぼ',
+	'開店',
+	'仕入れ',
+	'占い',
+	'帳簿',
 	'カレンダー',
-	'もちもの',
+	'持ち物',
 	'Tips',
-	'やすむ',
-	'おわる',
+	'休む',
+	'終わる',
 ];
 
 // === ショップ画面の状態 ===

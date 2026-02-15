@@ -6,7 +6,7 @@ const initialState: GameState = {
     scene: 'menu',
     party: [
         {
-            name: 'Merchant',
+            name: '商人',
             job: 'Warrior',
             level: 1,
             exp: 0,

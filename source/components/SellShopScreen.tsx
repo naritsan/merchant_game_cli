@@ -1,7 +1,6 @@
 import React from 'react';
 import { Box, Text, useInput } from 'ink';
 import BorderBox from './BorderBox.js';
-import CommandMenu from './CommandMenu.js';
 import {
     type GameState,
     SELL_SHOP_COMMANDS,
@@ -55,22 +54,25 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
             } else if (key.return) {
                 const { customer } = sellShop;
                 const filteredCommands = SELL_SHOP_COMMANDS.filter(cmd => {
-                    if (cmd === 'うる' && customer && customer.targetPrice > customer.maxBudget && customer.currentNegotiation > 0) {
+                    if (customer && customer.targetPrice === 0) {
+                        if (cmd === '売る' || cmd === '値引き') return false;
+                    }
+                    if (cmd === '売る' && customer && customer.targetPrice > customer.maxBudget && customer.currentNegotiation > 0) {
                         return false;
                     }
                     return true;
                 });
                 const command = filteredCommands[sellShop.selectedCommand];
 
-                if (command === 'うる') {
+                if (command === '売る') {
                     sellToCustomer();
-                } else if (command === 'ねびき') {
+                } else if (command === '値引き') {
                     const price = sellShop.customer?.targetPrice ?? 0;
                     setDiscountPrice(Math.floor(price * 0.9)); // 初期値は10%引き
                     setMode('discount');
-                } else if (command === 'ことわる') {
+                } else if (command === '断る') {
                     refuse();
-                } else if (command === 'みせをとじる') {
+                } else if (command === '店を閉じる') {
                     closeShop();
                 }
             }
@@ -96,22 +98,12 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
     const merchant = state.party[0];
     // merchant is possibly undefined if party is empty, though unlikely in this game logic.
     // Adding a fallback to avoid crash if party is somehow empty.
-    const merchantName = merchant ? merchant.name : 'Merchant';
+    const merchantName = merchant ? merchant.name : '商人';
     const merchantHp = merchant ? merchant.hp : 0;
     const merchantMaxHp = merchant ? merchant.maxHp : 0;
 
     // 陳列リストのスクロール表示用
     const VISIBLE_ITEMS = 10;
-    // 最新の商品が見えるように末尾を表示するか、先頭を表示するか？
-    // シンプルに先頭10件表示とする（スクロール機能はTODOで簡易実装とするか、要望通り実装するか）
-    // 要望: 「陳列リストのスクロール対応」
-    // ここでは簡易的に先頭10件を表示しつつ、本来は全件表示したいが枠の都合で...
-    // 今回は単純にslice(0, 10)のままにするタスクはないが、要件にあるので実装が必要。
-    // しかし選択カーソルがないのでスクロールの基準がない。
-    // 一旦全件表示しきれない場合は「...他X件」とするか、
-    // あるいは自動スクロール？いや、操作できないと意味がない。
-    // 陳列リストは操作対象ではないので、単純にリストアップされているだけ。
-    // ここではページネーション等は入れず、枠を広げたので多めに表示する。
     const displayItemsSlice = sellShop.displayItems.slice(0, VISIBLE_ITEMS);
 
     return (
@@ -134,9 +126,14 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                                     <Text bold>{customer.name}</Text>
                                     <Text> </Text>
                                     <Text>希望: {getItem(customer.wantItem).name}</Text>
-                                    <Text dimColor>定価: {getItem(customer.wantItem).price} G</Text>
+                                    {customer.targetPrice === 0 && (
+                                        <Text color="red">（陳列なし）</Text>
+                                    )}
                                     {state.showCustomerBudget && (
-                                        <Text dimColor>(予算: {customer.maxBudget} G)</Text>
+                                        <>
+                                            <Text dimColor>定価: {getItem(customer.wantItem).price} G</Text>
+                                            <Text dimColor>(予算: {customer.maxBudget} G)</Text>
+                                        </>
                                     )}
                                 </>
                             ) : (
@@ -168,9 +165,8 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                             <Text dimColor>売切</Text>
                         ) : (
                             displayItemsSlice.map((item, i) => {
-                                const name = getItem(item.stockItem.itemId).name.slice(0, 12); // Updated to use getItem
+                                const name = getItem(item.stockItem.itemId).name.slice(0, 12);
                                 const priceStr = `${item.price} G`;
-                                // 枠線とパディングを除いた有効幅は約26文字
                                 return (
                                     <Box key={i} justifyContent="space-between">
                                         <Text>{name}</Text>
@@ -205,16 +201,35 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                         (() => {
                             const { customer } = sellShop;
                             const filteredCommands = SELL_SHOP_COMMANDS.filter(cmd => {
-                                if (cmd === 'うる' && customer && customer.targetPrice > customer.maxBudget && customer.currentNegotiation > 0) {
+                                if (customer && customer.targetPrice === 0) {
+                                    if (cmd === '売る' || cmd === '値引き') return false;
+                                }
+                                if (cmd === '売る' && customer && customer.targetPrice > customer.maxBudget && customer.currentNegotiation > 0) {
                                     return false;
                                 }
                                 return true;
                             });
+                            const command = filteredCommands[sellShop.selectedCommand];
+                            // 型安全のためのチェック
+                            if (!command) return null;
+
+                            const isSelected = (cmd: string) => cmd === command;
+
                             return (
-                                <CommandMenu
-                                    items={filteredCommands as unknown as string[]}
-                                    selectedIndex={sellShop.selectedCommand}
-                                />
+                                <Box flexDirection="column" marginLeft={2}>
+                                    <Text>
+                                        {isSelected('売る') ? <Text color="green" bold>▶ 売る</Text> : <Text>  売る</Text>}
+                                    </Text>
+                                    <Text>
+                                        {isSelected('値引き') ? <Text color="green" bold>▶ 値引き</Text> : <Text>  値引き</Text>}
+                                    </Text>
+                                    <Text>
+                                        {isSelected('断る') ? <Text color="green" bold>▶ 断る</Text> : <Text>  断る</Text>}
+                                    </Text>
+                                    <Text>
+                                        {isSelected('店を閉じる') ? <Text color="green" bold>▶ 店を閉じる</Text> : <Text>  店を閉じる</Text>}
+                                    </Text>
+                                </Box>
                             );
                         })()
                     )}
