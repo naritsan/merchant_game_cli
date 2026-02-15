@@ -92,7 +92,7 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
 
         updateSellShop(() => ({
             customer,
-            sellMessage: `${customer.name} が やってきた！\n「${customer.dialogue}」`,
+            sellMessage: `「${customer.dialogue}」`,
             selectedCommand: 0,
             isWaiting: false,
         }));

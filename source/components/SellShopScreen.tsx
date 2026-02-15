@@ -111,7 +111,7 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
 
             <Box>
                 {/* Main Content Area (Left: Customer & Message) */}
-                <Box flexDirection="column" width={40}>
+                <Box flexDirection="column" width={30}>
                     {/* Customer Area (Top) */}
                     <BorderBox height={10} flexDirection="column">
                         <Box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
@@ -120,7 +120,7 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                                     <Text bold>{customer.name}</Text>
                                     <Text> </Text>
                                     <Text>希望: {customer.wantItem.name}</Text>
-                                    <Text>提示: <Text color="yellow">{customer.targetPrice} G</Text></Text>
+                                    <Text bold color="yellow">{customer.targetPrice} G</Text>
                                     {state.showCustomerBudget && (
                                         <Text dimColor>(予算: {customer.maxBudget} G)</Text>
                                     )}
@@ -143,21 +143,32 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                 </Box>
 
                 {/* Side Panel (Right: Display List) */}
-                <Box flexDirection="column" marginLeft={1} width={20}>
+                <Box flexDirection="column" width={30}>
                     <BorderBox flexGrow={1}>
-                        <Text bold>陳列リスト</Text>
+                        <Box justifyContent="space-between">
+                            <Text bold>陳列リスト</Text>
+                            <Text dimColor>{sellShop.displayItems.length}点</Text>
+                        </Box>
                         <Text> </Text>
                         {sellShop.displayItems.length === 0 ? (
                             <Text dimColor>売切</Text>
                         ) : (
-                            displayItemsSlice.map((item, i) => (
-                                <Text key={i}>
-                                    {item.inventoryItem.item.name.slice(0, 6)} {item.price}
-                                </Text>
-                            ))
+                            displayItemsSlice.map((item, i) => {
+                                const name = item.inventoryItem.item.name.slice(0, 12);
+                                const priceStr = `${item.price} G`;
+                                // 枠線とパディングを除いた有効幅は約26文字
+                                return (
+                                    <Box key={i} justifyContent="space-between">
+                                        <Text>{name}</Text>
+                                        <Text>{priceStr}</Text>
+                                    </Box>
+                                );
+                            })
                         )}
                         {sellShop.displayItems.length > VISIBLE_ITEMS && (
-                            <Text dimColor>他{sellShop.displayItems.length - VISIBLE_ITEMS}件</Text>
+                            <Box justifyContent="center">
+                                <Text dimColor>他{sellShop.displayItems.length - VISIBLE_ITEMS}件</Text>
+                            </Box>
                         )}
                     </BorderBox>
                 </Box>
@@ -165,7 +176,7 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
 
             {/* Bottom: Commands + Status */}
             <Box>
-                <BorderBox flexGrow={1}>
+                <BorderBox width={30}>
                     {sellShop.isWaiting ? (
                         <Box paddingX={1}>
                             <Text dimColor>Enter: つぎへ</Text>
@@ -183,7 +194,7 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                         />
                     )}
                 </BorderBox>
-                <BorderBox flexGrow={1}>
+                <BorderBox width={30}>
                     <Box flexDirection="column" paddingX={1}>
                         <Text>
                             {merchant.name} HP {merchant.hp}/{merchant.maxHp}
