@@ -61,7 +61,7 @@ export default function ShopSetupScreen({ state, setState, changeScene, advanceT
             }
         }
 
-        if (_input === 'o' || _input === 'O') {
+        if (_input === 'p' || _input === 'P') {
             if (state.sellShop.displayItems.length > 0) {
                 openShop();
             }
@@ -157,7 +157,7 @@ export default function ShopSetupScreen({ state, setState, changeScene, advanceT
                 {state.sellShop.displayItems.length > 0 && mode === 'select' ? (
                     <Box marginBottom={1}>
                         <Text color="green" bold>
-                            準備OK！ [O] キーで みせをひらく
+                            準備OK！ [P] キーで みせをひらく
                         </Text>
                     </Box>
                 ) : null}
