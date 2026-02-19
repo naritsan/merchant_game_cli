@@ -9,6 +9,30 @@ import { useSellShopState } from '../hooks/useSellShopState.js';
 import { useAcceleratedValue } from '../hooks/useAcceleratedValue.js';
 import { getItem } from '../types/items.js';
 
+function getVisualWidth(str: string): number {
+    let w = 0;
+    for (let i = 0; i < str.length; i++) {
+        const code = str.charCodeAt(i);
+        // 半角カナや一部の特殊記号を除く一般的な全角文字の判定（簡易版）
+        if ((code >= 0x0 && code <= 0x81) || (code === 0xf8f0) || (code >= 0xff61 && code <= 0xff9f) || (code >= 0xf8f1 && code <= 0xf8f4)) {
+            w += 1;
+        } else {
+            w += 2;
+        }
+    }
+    return w;
+}
+
+function padRightToVisualWidth(str: string, width: number): string {
+    const w = getVisualWidth(str);
+    return str + ' '.repeat(Math.max(0, width - w));
+}
+
+function padLeftToVisualWidth(str: string, width: number): string {
+    const w = getVisualWidth(str);
+    return ' '.repeat(Math.max(0, width - w)) + str;
+}
+
 type Props = {
     state: GameState;
     setState: React.Dispatch<React.SetStateAction<GameState>>;
@@ -197,20 +221,22 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                                     const priceStr = `${item.price}G`;
                                     const costStr = `[${Math.round(item.originalCost)}G]`;
 
-                                    // inkのflexboxに任せる。文字列操作でのパディングは完全に廃止し、空白領域が
-                                    // 確実に上書きされるようにBoxの背景（widthやflexDrop）を信じる
-                                    // ただし wrap="truncate-end" のみ付与して溢れを防止する
+                                    // 文字列の視覚的な幅（全角=2, 半角=1）を計算し、必要な幅（16, 9, 9）を
+                                    // 確実に半角スペースで埋めることでinkの描画残骸を上書きする
+                                    const paddedItemName = padRightToVisualWidth(itemName, 16);
+                                    const paddedCostStr = padLeftToVisualWidth(costStr, 9);
+                                    const paddedPriceStr = padLeftToVisualWidth(priceStr, 8); // ' 'が頭に1つ付くため8
 
                                     return (
                                         <Box key={i}>
                                             <Box width={16}>
-                                                <Text wrap="truncate-end">{itemName}</Text>
+                                                <Text>{paddedItemName}</Text>
                                             </Box>
                                             <Box width={9} justifyContent="flex-end">
-                                                <Text dimColor>{costStr}</Text>
+                                                <Text dimColor>{paddedCostStr}</Text>
                                             </Box>
                                             <Box width={9} justifyContent="flex-end">
-                                                <Text> {priceStr}</Text>
+                                                <Text> {paddedPriceStr}</Text>
                                             </Box>
                                         </Box>
                                     );
