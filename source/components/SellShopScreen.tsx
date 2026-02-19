@@ -9,24 +9,6 @@ import { useSellShopState } from '../hooks/useSellShopState.js';
 import { useAcceleratedValue } from '../hooks/useAcceleratedValue.js';
 import { getItem } from '../types/items.js';
 
-function getDisplayWidth(str: string): number {
-    let w = 0;
-    for (let i = 0; i < str.length; i++) {
-        w += str.charCodeAt(i) > 255 ? 2 : 1;
-    }
-    return w;
-}
-
-function padRight(str: string, width: number): string {
-    const w = getDisplayWidth(str);
-    return str + ' '.repeat(Math.max(0, width - w));
-}
-
-function padLeft(str: string, width: number): string {
-    const w = getDisplayWidth(str);
-    return ' '.repeat(Math.max(0, width - w)) + str;
-}
-
 type Props = {
     state: GameState;
     setState: React.Dispatch<React.SetStateAction<GameState>>;
@@ -212,19 +194,22 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                             <Box flexDirection="column">
                                 {displayItemsSlice.map((item, i) => {
                                     const itemName = getItem(item.stockItem.itemId).name;
-                                    const paddedItemName = padRight(itemName, 16);
-                                    const priceStr = padLeft(`${item.price}G`, 8);
-                                    const costStr = padLeft(`[${Math.round(item.originalCost)}G]`, 9);
+                                    const priceStr = `${item.price}G`;
+                                    const costStr = `[${Math.round(item.originalCost)}G]`;
+
+                                    // inkでの残骸文字を消すためのハック: 空白文字で右側を確実に埋める。
+                                    // padEndで全角スペースを用いて文字幅を調整する。（※簡易的な対応）
+
                                     return (
                                         <Box key={i}>
                                             <Box width={16}>
-                                                <Text>{paddedItemName}</Text>
+                                                <Text wrap="truncate-end">{itemName.padEnd(16, '　').slice(0, 16)}</Text>
                                             </Box>
-                                            <Box width={9}>
-                                                <Text dimColor>{costStr}</Text>
+                                            <Box width={9} justifyContent="flex-end">
+                                                <Text dimColor>{costStr.padStart(9, ' ')}</Text>
                                             </Box>
-                                            <Box width={9}>
-                                                <Text> {priceStr}</Text>
+                                            <Box width={9} justifyContent="flex-end">
+                                                <Text> {priceStr.padStart(8, ' ')}</Text>
                                             </Box>
                                         </Box>
                                     );
