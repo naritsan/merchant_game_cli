@@ -9,20 +9,6 @@ import { useSellShopState } from '../hooks/useSellShopState.js';
 import { useAcceleratedValue } from '../hooks/useAcceleratedValue.js';
 import { getItem } from '../types/items.js';
 
-function getVisualWidth(str: string): number {
-    let w = 0;
-    for (let i = 0; i < str.length; i++) {
-        // 簡易的に全角(>255)は幅2、ASCIIは1として計算
-        w += str.charCodeAt(i) > 255 ? 2 : 1;
-    }
-    return w;
-}
-
-function padRightToVisualWidth(str: string, width: number): string {
-    const w = getVisualWidth(str);
-    return str + ' '.repeat(Math.max(0, width - w));
-}
-
 type Props = {
     state: GameState;
     setState: React.Dispatch<React.SetStateAction<GameState>>;
@@ -211,20 +197,20 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                                     const priceStr = `${item.price}G`;
                                     const costStr = `[${Math.round(item.originalCost)}G]`;
 
-                                    // inkのflexboxレイアウトで過去の描画残骸が残らないように
-                                    // visual-widthを元に半角スペースで右側を確実にパディングして上書きする
-                                    const paddedItemName = padRightToVisualWidth(itemName, 16);
+                                    // inkのflexboxに任せる。文字列操作でのパディングは完全に廃止し、空白領域が
+                                    // 確実に上書きされるようにBoxの背景（widthやflexDrop）を信じる
+                                    // ただし wrap="truncate-end" のみ付与して溢れを防止する
 
                                     return (
                                         <Box key={i}>
                                             <Box width={16}>
-                                                <Text>{paddedItemName}</Text>
+                                                <Text wrap="truncate-end">{itemName}</Text>
                                             </Box>
                                             <Box width={9} justifyContent="flex-end">
-                                                <Text dimColor>{costStr.padStart(9, ' ')}</Text>
+                                                <Text dimColor>{costStr}</Text>
                                             </Box>
                                             <Box width={9} justifyContent="flex-end">
-                                                <Text> {priceStr.padStart(8, ' ')}</Text>
+                                                <Text> {priceStr}</Text>
                                             </Box>
                                         </Box>
                                     );
