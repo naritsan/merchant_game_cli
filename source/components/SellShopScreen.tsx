@@ -9,30 +9,6 @@ import { useSellShopState } from '../hooks/useSellShopState.js';
 import { useAcceleratedValue } from '../hooks/useAcceleratedValue.js';
 import { getItem } from '../types/items.js';
 
-function getVisualWidth(str: string): number {
-    let w = 0;
-    for (let i = 0; i < str.length; i++) {
-        const code = str.charCodeAt(i);
-        // 半角カナや一部の特殊記号を除く一般的な全角文字の判定（簡易版）
-        if ((code >= 0x0 && code <= 0x81) || (code === 0xf8f0) || (code >= 0xff61 && code <= 0xff9f) || (code >= 0xf8f1 && code <= 0xf8f4)) {
-            w += 1;
-        } else {
-            w += 2;
-        }
-    }
-    return w;
-}
-
-function padRightToVisualWidth(str: string, width: number): string {
-    const w = getVisualWidth(str);
-    return str + ' '.repeat(Math.max(0, width - w));
-}
-
-function padLeftToVisualWidth(str: string, width: number): string {
-    const w = getVisualWidth(str);
-    return ' '.repeat(Math.max(0, width - w)) + str;
-}
-
 type Props = {
     state: GameState;
     setState: React.Dispatch<React.SetStateAction<GameState>>;
@@ -215,28 +191,25 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                                 <Text dimColor>売切</Text>
                             </Box>
                         ) : (
-                            <Box flexDirection="column">
-                                {displayItemsSlice.map((item, i) => {
+                            <Box flexDirection="column" key={`list-${sellShop.displayItems.length}-${scrollIndex}`}>
+                                {displayItemsSlice.map((item) => {
                                     const itemName = getItem(item.stockItem.itemId).name;
                                     const priceStr = `${item.price}G`;
                                     const costStr = `[${Math.round(item.originalCost)}G]`;
 
-                                    // 文字列の視覚的な幅（全角=2, 半角=1）を計算し、必要な幅（16, 9, 9）を
-                                    // 確実に半角スペースで埋めることでinkの描画残骸を上書きする
-                                    const paddedItemName = padRightToVisualWidth(itemName, 16);
-                                    const paddedCostStr = padLeftToVisualWidth(costStr, 9);
-                                    const paddedPriceStr = padLeftToVisualWidth(priceStr, 8); // ' 'が頭に1つ付くため8
+                                    // 文字列のパディングは行わず、コンテナのkeyを変更して
+                                    // Reactに毎度要素を作り直させることでターミナルの描画残骸を消去する
 
                                     return (
-                                        <Box key={i}>
+                                        <Box key={item.stockItem.itemId}>
                                             <Box width={16}>
-                                                <Text>{paddedItemName}</Text>
+                                                <Text wrap="truncate-end">{itemName}</Text>
                                             </Box>
                                             <Box width={9} justifyContent="flex-end">
-                                                <Text dimColor>{paddedCostStr}</Text>
+                                                <Text dimColor>{costStr}</Text>
                                             </Box>
                                             <Box width={9} justifyContent="flex-end">
-                                                <Text> {paddedPriceStr}</Text>
+                                                <Text> {priceStr}</Text>
                                             </Box>
                                         </Box>
                                     );
