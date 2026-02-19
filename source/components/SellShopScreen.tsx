@@ -9,6 +9,20 @@ import { useSellShopState } from '../hooks/useSellShopState.js';
 import { useAcceleratedValue } from '../hooks/useAcceleratedValue.js';
 import { getItem } from '../types/items.js';
 
+function getVisualWidth(str: string): number {
+    let w = 0;
+    for (let i = 0; i < str.length; i++) {
+        // 簡易的に全角(>255)は幅2、ASCIIは1として計算
+        w += str.charCodeAt(i) > 255 ? 2 : 1;
+    }
+    return w;
+}
+
+function padRightToVisualWidth(str: string, width: number): string {
+    const w = getVisualWidth(str);
+    return str + ' '.repeat(Math.max(0, width - w));
+}
+
 type Props = {
     state: GameState;
     setState: React.Dispatch<React.SetStateAction<GameState>>;
@@ -197,13 +211,14 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                                     const priceStr = `${item.price}G`;
                                     const costStr = `[${Math.round(item.originalCost)}G]`;
 
-                                    // inkでの残骸文字を消すためのハック: 空白文字で右側を確実に埋める。
-                                    // padEndで全角スペースを用いて文字幅を調整する。（※簡易的な対応）
+                                    // inkのflexboxレイアウトで過去の描画残骸が残らないように
+                                    // visual-widthを元に半角スペースで右側を確実にパディングして上書きする
+                                    const paddedItemName = padRightToVisualWidth(itemName, 16);
 
                                     return (
                                         <Box key={i}>
                                             <Box width={16}>
-                                                <Text wrap="truncate-end">{itemName.padEnd(16, '　').slice(0, 16)}</Text>
+                                                <Text>{paddedItemName}</Text>
                                             </Box>
                                             <Box width={9} justifyContent="flex-end">
                                                 <Text dimColor>{costStr.padStart(9, ' ')}</Text>
