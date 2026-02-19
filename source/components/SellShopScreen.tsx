@@ -9,6 +9,24 @@ import { useSellShopState } from '../hooks/useSellShopState.js';
 import { useAcceleratedValue } from '../hooks/useAcceleratedValue.js';
 import { getItem } from '../types/items.js';
 
+function getDisplayWidth(str: string): number {
+    let w = 0;
+    for (let i = 0; i < str.length; i++) {
+        w += str.charCodeAt(i) > 255 ? 2 : 1;
+    }
+    return w;
+}
+
+function padRight(str: string, width: number): string {
+    const w = getDisplayWidth(str);
+    return str + ' '.repeat(Math.max(0, width - w));
+}
+
+function padLeft(str: string, width: number): string {
+    const w = getDisplayWidth(str);
+    return ' '.repeat(Math.max(0, width - w)) + str;
+}
+
 type Props = {
     state: GameState;
     setState: React.Dispatch<React.SetStateAction<GameState>>;
@@ -194,17 +212,18 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                             <Box flexDirection="column">
                                 {displayItemsSlice.map((item, i) => {
                                     const itemName = getItem(item.stockItem.itemId).name;
-                                    const priceStr = `${item.price}G`;
-                                    const costStr = `${Math.round(item.originalCost)}G`;
+                                    const paddedItemName = padRight(itemName, 16);
+                                    const priceStr = padLeft(`${item.price}G`, 8);
+                                    const costStr = padLeft(`[${Math.round(item.originalCost)}G]`, 9);
                                     return (
                                         <Box key={i}>
                                             <Box width={16}>
-                                                <Text wrap="truncate-end">{itemName}</Text>
+                                                <Text>{paddedItemName}</Text>
                                             </Box>
-                                            <Box width={9} justifyContent="flex-end">
-                                                <Text dimColor>[{costStr}]</Text>
+                                            <Box width={9}>
+                                                <Text dimColor>{costStr}</Text>
                                             </Box>
-                                            <Box width={9} justifyContent="flex-end">
+                                            <Box width={9}>
                                                 <Text> {priceStr}</Text>
                                             </Box>
                                         </Box>
