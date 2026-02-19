@@ -78,6 +78,7 @@ export type Monster = {
 export type Customer = {
 	name: string;
 	wantItem: ItemId; // Changed to ItemId
+	wantQuantity: number; // 客が希望する購入数
 	maxBudget: number;
 	targetPrice: number;
 	maxNegotiations: number;
@@ -86,7 +87,7 @@ export type Customer = {
 	dialogue: string;
 };
 
-export const CUSTOMERS: (Omit<Customer, 'wantItem' | 'maxBudget' | 'targetPrice' | 'currentNegotiation' | 'dialogue'> & { preferredItems: ItemId[] })[] = [
+export const CUSTOMERS: (Omit<Customer, 'wantItem' | 'wantQuantity' | 'maxBudget' | 'targetPrice' | 'currentNegotiation' | 'dialogue'> & { preferredItems: ItemId[] })[] = [
 	{ name: 'まちのむすめ', maxNegotiations: 0, preferredItems: ['herb', 'cloth_clothes'] },
 	{ name: 'たびのせんし', maxNegotiations: 2, preferredItems: ['copper_sword', 'iron_sword', 'leather_shield', 'iron_shield'] },
 	{ name: 'おかねもち', maxNegotiations: 3, preferredItems: ['steel_sword', 'chain_mail', 'iron_shield'] },

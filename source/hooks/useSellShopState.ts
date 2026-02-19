@@ -27,12 +27,26 @@ function generateCustomer(displayItems: DisplayItem[], luck: Luck): Customer | n
 
     // 陳列リストにあるか確認
     const targetDisplayItem = displayItems.find(d => d.stockItem.itemId === wantItemId);
-    const targetPrice = targetDisplayItem ? targetDisplayItem.price : 0;
+
+    // 購入希望数の決定
+    let wantQuantity = 1;
+    if (wantItemData.type === 'item') {
+        if (targetDisplayItem) {
+            // 陳列されている場合、その個数以下のランダムな数（やや多め）
+            const maxQty = targetDisplayItem.stockItem.quantity;
+            wantQuantity = Math.floor(Math.random() * maxQty) + 1;
+        } else {
+            // 陳列されていない場合、1〜3個
+            wantQuantity = Math.floor(Math.random() * 3) + 1;
+        }
+    }
+
+    const targetPrice = targetDisplayItem ? targetDisplayItem.price * wantQuantity : 0;
 
     // 客の予算はアイテム定価の80%〜110%でランダム
     const budgetRate = 0.8 + Math.random() * 0.3;
     // 運勢補正を適用
-    const maxBudget = Math.floor(wantItemData.price * budgetRate * getCustomerBudgetMultiplier(luck));
+    const maxBudget = Math.floor(wantItemData.price * wantQuantity * budgetRate * getCustomerBudgetMultiplier(luck));
 
     const dialogues = [
         `${wantItemData.name} が ほしいのですが…`,
@@ -45,6 +59,7 @@ function generateCustomer(displayItems: DisplayItem[], luck: Luck): Customer | n
     return {
         ...template,
         wantItem: wantItemId,
+        wantQuantity,
         targetPrice,
         maxBudget,
         currentNegotiation: 0,
@@ -168,7 +183,7 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
 
 
     // 商品売却と陳列の更新
-    const executeSale = useCallback((price: number, itemId: string) => {
+    const executeSale = useCallback((price: number, itemId: string, quantity: number) => {
         setState(prev => {
             const displayIndex = prev.sellShop.displayItems.findIndex(
                 d => d.stockItem.itemId === itemId
@@ -180,19 +195,19 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
             const itemData = getItem(itemId as any); // Type assertion safely
 
             // 利益計算
-            const profit = price - targetDisplayItem.originalCost;
+            const profit = price - (targetDisplayItem.originalCost * quantity);
 
             // 在庫（陳列）から減らす
             const newDisplayItems = [...prev.sellShop.displayItems];
 
             // スタック処理：陳列もスタックされている場合、数量を減らす
             const currentQuantity = targetDisplayItem.stockItem.quantity;
-            if (currentQuantity > 1) {
+            if (currentQuantity > quantity) {
                 newDisplayItems[displayIndex] = {
                     ...targetDisplayItem,
                     stockItem: {
                         ...targetDisplayItem.stockItem,
-                        quantity: currentQuantity - 1
+                        quantity: currentQuantity - quantity
                     }
                 };
             } else {
@@ -205,11 +220,11 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
                 date: { day: prev.day, hour: prev.hour, minute: prev.minute },
                 type: 'sell',
                 itemId: itemId as any,
-                quantity: 1,
-                price: price, // 売値
+                quantity: quantity,
+                price: Math.floor(price / quantity), // 売値(単価)
                 totalPrice: price,
                 partner: prev.sellShop.customer?.name ?? '客',
-                cost: targetDisplayItem.originalCost, // 売買時点での原価（平均仕入単価）を記録
+                cost: targetDisplayItem.originalCost * quantity, // 売買時点での原価合計を記録
             };
 
             return {
@@ -219,7 +234,7 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
                 sellShop: {
                     ...prev.sellShop,
                     displayItems: newDisplayItems,
-                    sellMessage: `${itemData.name} を ${price} G で 売りました！${prev.hour >= 17 && prev.minute >= 30 ? '\nもう18時です。店を閉めましょう。' : ''}`,
+                    sellMessage: `${itemData.name} x${quantity} を ${price} G で 売りました！${prev.hour >= 17 && prev.minute >= 30 ? '\nもう18時です。店を閉めましょう。' : ''}`,
                     salesCount: prev.sellShop.salesCount + 1,
                     customer: null,
                     isWaiting: true,
@@ -257,7 +272,7 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
             return;
         }
 
-        executeSale(customer.targetPrice, customer.wantItem);
+        executeSale(customer.targetPrice, customer.wantItem, customer.wantQuantity);
     }, [state.sellShop, updateSellShop, executeSale, advanceTime]);
 
     // 値引き（カウンター）
@@ -271,7 +286,7 @@ export function useSellShopState({ state, setState, changeScene, advanceTime }: 
 
         // 予算内に入った場合 -> 売れる
         if (newPrice <= customer.maxBudget) {
-            executeSale(newPrice, customer.wantItem);
+            executeSale(newPrice, customer.wantItem, customer.wantQuantity);
             updateSellShop(() => ({
                 sellMessage: `「ありがとう！ それなら 買います！」\n（${newPrice} G で 売れました）`
             }));

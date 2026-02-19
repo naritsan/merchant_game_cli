@@ -120,7 +120,7 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
 
     const { customer } = sellShop;
     const activeItem = customer ? sellShop.displayItems.find(d => d.stockItem.itemId === customer.wantItem) : null;
-    const activeItemCost = activeItem ? Math.round(activeItem.originalCost) : 0;
+    const activeItemCost = activeItem && customer ? Math.round(activeItem.originalCost) * customer.wantQuantity : 0;
 
     const merchant = state.party[0];
     // merchant is possibly undefined if party is empty, though unlikely in this game logic.
@@ -152,13 +152,13 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                                 <>
                                     <Text bold>{customer.name}</Text>
                                     <Text> </Text>
-                                    <Text>希望: {getItem(customer.wantItem).name.slice(0, 10)}</Text>
+                                    <Text>希望: {getItem(customer.wantItem).name.slice(0, 10)} x{customer.wantQuantity}</Text>
                                     {customer.targetPrice === 0 && (
                                         <Text color="red">（陳列なし）</Text>
                                     )}
                                     {state.showCustomerBudget && (
                                         <>
-                                            <Text dimColor>定価: {getItem(customer.wantItem).price}G</Text>
+                                            <Text dimColor>定価: {getItem(customer.wantItem).price * customer.wantQuantity}G</Text>
                                             <Text dimColor>(予算: {customer.maxBudget}G)</Text>
                                         </>
                                     )}
