@@ -9,6 +9,30 @@ import { useSellShopState } from '../hooks/useSellShopState.js';
 import { useAcceleratedValue } from '../hooks/useAcceleratedValue.js';
 import { getItem } from '../types/items.js';
 
+function getVisualWidth(str: string): number {
+    let w = 0;
+    for (let i = 0; i < str.length; i++) {
+        const code = str.charCodeAt(i);
+        // ASCII, 半角カナなど
+        if ((code >= 0x0 && code <= 0x81) || (code === 0xf8f0) || (code >= 0xff61 && code <= 0xff9f) || (code >= 0xf8f1 && code <= 0xf8f4)) {
+            w += 1;
+        } else {
+            w += 2;
+        }
+    }
+    return w;
+}
+
+function padRightToVisualWidth(str: string, width: number): string {
+    const w = getVisualWidth(str);
+    return str + ' '.repeat(Math.max(0, width - w));
+}
+
+function padLeftToVisualWidth(str: string, width: number): string {
+    const w = getVisualWidth(str);
+    return ' '.repeat(Math.max(0, width - w)) + str;
+}
+
 type Props = {
     state: GameState;
     setState: React.Dispatch<React.SetStateAction<GameState>>;
@@ -134,7 +158,7 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
     const displayItemsSlice = sellShop.displayItems.slice(scrollIndex, scrollIndex + VISIBLE_ITEMS);
 
     return (
-        <Box flexDirection="column" width={60}>
+        <Box flexDirection="column" width={62}>
             {/* Title */}
             <Box justifyContent="center">
                 <Text bold color="magenta">
@@ -172,7 +196,7 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                     </BorderBox>
                 </Box>
 
-                <Box flexDirection="column" width={36}>
+                <Box flexDirection="column" width={38}>
                     {/* Display List Area */}
                     <BorderBox height={10} flexDirection="column">
                         <Box justifyContent="space-between">
@@ -197,20 +221,18 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                                     const priceStr = `${item.price}G`;
                                     const costStr = `[${Math.round(item.originalCost)}G]`;
 
-                                    // 文字列のパディングは行わず、コンテナのkeyを変更して
-                                    // Reactに毎度要素を作り直させることでターミナルの描画残骸を消去する
+                                    // コンテナに収まるように(Inner width 34)固定幅でスペース埋めした文字列を生成
+                                    const paddedItemName = padRightToVisualWidth(itemName, 16);
+                                    const paddedCostStr = padLeftToVisualWidth(costStr, 9);
+                                    const paddedPriceStr = padLeftToVisualWidth(priceStr, 9);
 
                                     return (
                                         <Box key={item.stockItem.itemId}>
-                                            <Box width={16}>
-                                                <Text wrap="truncate-end">{itemName}</Text>
-                                            </Box>
-                                            <Box width={9} justifyContent="flex-end">
-                                                <Text dimColor>{costStr}</Text>
-                                            </Box>
-                                            <Box width={9} justifyContent="flex-end">
-                                                <Text> {priceStr}</Text>
-                                            </Box>
+                                            <Text>
+                                                <Text>{paddedItemName}</Text>
+                                                <Text dimColor>{paddedCostStr}</Text>
+                                                <Text>{paddedPriceStr}</Text>
+                                            </Text>
                                         </Box>
                                     );
                                 })}
@@ -221,7 +243,7 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
             </Box>
 
             {/* Message Area (Full Width) */}
-            <BorderBox height={6} flexDirection="column" width={60}>
+            <BorderBox height={6} flexDirection="column" width={62}>
                 <Text>{sellShop.sellMessage}</Text>
                 {sellShop.isWaiting && (
                     <Text dimColor>{state.hour >= 18 ? '（Enter で みせをとじる）' : '（Enter で つぎのきゃく）'}</Text>
