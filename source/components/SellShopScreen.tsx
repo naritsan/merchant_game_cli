@@ -23,6 +23,21 @@ function getVisualWidth(str: string): number {
     return w;
 }
 
+function sliceToVisualWidth(str: string, maxWidth: number): string {
+    let w = 0;
+    let sliced = '';
+    for (let i = 0; i < str.length; i++) {
+        const code = str.charCodeAt(i);
+        const charW = ((code >= 0x0 && code <= 0x81) || (code === 0xf8f0) || (code >= 0xff61 && code <= 0xff9f) || (code >= 0xf8f1 && code <= 0xf8f4)) ? 1 : 2;
+        if (w + charW > maxWidth) {
+            break;
+        }
+        w += charW;
+        sliced += str[i];
+    }
+    return sliced;
+}
+
 function padRightToVisualWidth(str: string, width: number): string {
     const w = getVisualWidth(str);
     return str + ' '.repeat(Math.max(0, width - w));
@@ -220,9 +235,15 @@ export default function SellShopScreen({ state, setState, changeScene, advanceTi
                                     const itemName = getItem(item.stockItem.itemId).name;
                                     const priceStr = `${item.price}G`;
                                     const costStr = `[${Math.round(item.originalCost)}G]`;
+                                    const qtyStr = ` (${item.stockItem.quantity})`;
+
+                                    // 数量文字列の幅を引いた分だけアイテム名を表示（最大16幅）
+                                    const maxNameWidth = 16 - getVisualWidth(qtyStr);
+                                    const slicedName = sliceToVisualWidth(itemName, Math.max(0, maxNameWidth));
+                                    const displayName = `${slicedName}${qtyStr}`;
 
                                     // コンテナに収まるように(Inner width 34)固定幅でスペース埋めした文字列を生成
-                                    const paddedItemName = padRightToVisualWidth(itemName, 16);
+                                    const paddedItemName = padRightToVisualWidth(displayName, 16);
                                     const paddedCostStr = padLeftToVisualWidth(costStr, 9);
                                     const paddedPriceStr = padLeftToVisualWidth(priceStr, 9);
 
