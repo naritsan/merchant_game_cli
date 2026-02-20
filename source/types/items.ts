@@ -9,7 +9,9 @@ export type ItemId =
     | 'iron_shield'
     | 'cloth_clothes'
     | 'chain_mail'
-    | 'herb'; // Added herb as a basic item example
+    | 'herb'
+    | 'antidote'
+    | 'chimera_wing';
 
 export type ItemData = {
     id: ItemId;
@@ -84,6 +86,20 @@ export const ITEMS: Record<ItemId, ItemData> = {
         price: 10,
         type: 'item',
         description: 'HPを少し回復する'
+    },
+    'antidote': {
+        id: 'antidote',
+        name: 'どくけしそう',
+        price: 15,
+        type: 'item',
+        description: 'どくをなおす草'
+    },
+    'chimera_wing': {
+        id: 'chimera_wing',
+        name: 'キメラのつばさ',
+        price: 30,
+        type: 'item',
+        description: '拠点にもどる翼'
     }
 };
 
